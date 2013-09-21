@@ -1,4 +1,4 @@
-package eventstream
+package eventhub
 
 import (
 	"time"
@@ -16,14 +16,4 @@ type Event struct {
 	OtherReferences []string
 	Actors          []string
 	Tags            []string
-}
-
-type EventStream struct {
-	Events chan *Event
-}
-
-func NewEventStream() *EventStream {
-	return &EventStream{
-		Events: make(chan *Event),
-	}
 }
