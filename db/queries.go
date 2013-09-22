@@ -57,18 +57,7 @@ const (
 
 	selectByIdSQL = `
     SELECT
-        "id",
-        "key",
-        "created",
-        "updated",
-        "payload",
-        "description",
-        "importance",
-        "origin",
-        "entities",
-        "other_references",
-        "actors",
-        "tags"
+        *
     FROM
         "event"
     WHERE "id" = $1

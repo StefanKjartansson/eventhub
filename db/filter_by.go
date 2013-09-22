@@ -25,18 +25,13 @@ func (p *PostgresDataSource) FilterBy(m map[string]interface{}) ([]*eventhub.Eve
 		if cnt < l {
 			buffer.WriteString(" and ")
 		} else {
-			buffer.WriteString(";")
+			buffer.WriteString(" order by updated desc;")
 		}
 		cnt++
 	}
 
-	stmt, err := p.pg.Prepare(buffer.String())
-	if err != nil {
-		return nil, err
-	}
-
-	err = wrapTransaction(p.pg, func(tx *sql.Tx) error {
-		rows, err := tx.Stmt(stmt).Query(args...)
+	err := wrapTransaction(p.pg, func(tx *sql.Tx) error {
+		rows, err := tx.Query(buffer.String(), args...)
 		defer rows.Close()
 		for rows.Next() {
 			var e eventhub.Event
@@ -49,5 +44,5 @@ func (p *PostgresDataSource) FilterBy(m map[string]interface{}) ([]*eventhub.Eve
 		return err
 	})
 
-	return events, nil
+	return events, err
 }
