@@ -28,7 +28,7 @@ const (
             ARRAY[$7],
             ARRAY[$8],
             ARRAY[$9])
-    RETURNING "id";
+    RETURNING "id", "created", "updated";
     `
 
 	updateSQL = `
@@ -161,7 +161,7 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 
 	switch e.ID {
 	case 0:
-		err = tx.Stmt(p.insert).QueryRow(args...).Scan(&e.ID)
+		err = tx.Stmt(p.insert).QueryRow(args...).Scan(&e.ID, &e.Created, &e.Updated)
 	default:
 		args := append(args, e.ID)
 		err = tx.Stmt(p.update).QueryRow(args...).Scan(&e.Updated)

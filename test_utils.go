@@ -1,7 +1,6 @@
 package eventhub
 
 import (
-    "time"
     "testing"
 )
 
@@ -15,7 +14,6 @@ func RunDataBackendTest(t *testing.T, d DataBackend) {
 
 	e := Event{
 		Key:         "foo.bar",
-		Created:     time.Now(),
 		Payload:     data,
 		Description: "My event",
 		Importance:  3,
