@@ -2,6 +2,7 @@ CREATE TABLE event (
     id serial NOT NULL PRIMARY KEY,
     key varchar(256) NOT NULL,
     created timestamp with time zone NOT NULL,
+    updated timestamp with time zone NOT NULL,
     payload json NOT NULL,
     description text NOT NULL,
     importance integer NOT NULL,
@@ -16,6 +17,7 @@ CREATE TABLE event (
 CREATE INDEX event_key ON event (key);
 CREATE INDEX event_key_like ON event (key varchar_pattern_ops);
 CREATE INDEX event_created ON event (created);
+CREATE INDEX event_updated ON event (updated);
 CREATE INDEX event_importance ON event (importance);
 CREATE INDEX event_origin ON event (origin);
 CREATE INDEX event_origin_like ON event (origin varchar_pattern_ops);
