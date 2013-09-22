@@ -1,10 +1,10 @@
 package db
 
 import (
-    "fmt"
-    "regexp"
-    "errors"
-    "strings"
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
 )
 
 var (
