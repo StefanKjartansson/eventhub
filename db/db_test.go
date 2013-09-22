@@ -2,10 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
 	"testing"
 	"time"
-    "github.com/StefanKjartansson/eventhub"
 )
 
 func TestMigrationsGlob(t *testing.T) {
@@ -69,5 +69,5 @@ func TestDB(t *testing.T) {
 		return
 	}
 
-    eventhub.RunDataBackendTest(t, p)
+	eventhub.RunDataBackendTest(t, p)
 }
