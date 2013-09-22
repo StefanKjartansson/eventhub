@@ -31,7 +31,6 @@ func RunDataBackendTest(t *testing.T, d DataBackend) {
 	}
 
 	newE, err := d.GetById(1)
-
 	if err != nil {
 		t.Error("PostgresDataSource has error:", err)
 		return
@@ -39,4 +38,16 @@ func RunDataBackendTest(t *testing.T, d DataBackend) {
 
 	t.Logf("%v", newE)
 
+    newE.Description = "New Description"
+    err = d.Save(newE)
+	if err != nil {
+		t.Error("PostgresDataSource has error:", err)
+		return
+	}
+
+	updated, err := d.GetById(1)
+	if updated.Description != newE.Description {
+		t.Error("PostgresDataSource has error:", err)
+		return
+	}
 }
