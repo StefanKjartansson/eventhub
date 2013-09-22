@@ -175,3 +175,26 @@ func bootstrapDatabase(db *sql.DB) {
 		}
 	}
 }
+
+type TransactionFunc func(*sql.Tx) error
+
+func wrapTransaction(db *sql.DB, callBack TransactionFunc) (err error) {
+
+	var tx *sql.Tx
+
+	if tx, err = db.Begin(); err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	return callBack(tx)
+
+}
