@@ -8,6 +8,7 @@ type Event struct {
 	ID              int
 	Key             string
 	Created         time.Time
+	Updated         time.Time
 	Payload         interface{}
 	Description     string
 	Importance      int
