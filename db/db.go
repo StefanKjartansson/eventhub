@@ -11,10 +11,20 @@ import (
 
 const (
 	insertSQL = `
-    INSERT INTO
-        "event"
-        ("key", "created", "updated", "payload", "description", "importance", "origin",
-         "entities", "other_references", "actors", "tags")
+    INSERT INTO "event"
+        (
+            "key",
+            "created",
+            "updated",
+            "payload",
+            "description",
+            "importance",
+            "origin",
+            "entities",
+            "other_references",
+            "actors",
+            "tags"
+        )
     VALUES
         (
             $1,
@@ -27,8 +37,12 @@ const (
             ARRAY[$6],
             ARRAY[$7],
             ARRAY[$8],
-            ARRAY[$9])
-    RETURNING "id", "created", "updated";
+            ARRAY[$9]
+        )
+    RETURNING
+        "id",
+        "created",
+        "updated";
     `
 
 	updateSQL = `
@@ -46,12 +60,24 @@ const (
         "updated" = now()
     WHERE
         "id" = $10
-    RETURNING "updated";
+    RETURNING
+        "updated";
     `
 
 	selectByIdSQL = `
-    SELECT "id", "key", "created", "updated", "payload", "description", "importance",
-        "origin", "entities", "other_references", "actors", "tags"
+    SELECT
+        "id",
+        "key",
+        "created",
+        "updated",
+        "payload",
+        "description",
+        "importance",
+        "origin",
+        "entities",
+        "other_references",
+        "actors",
+        "tags"
     FROM
         "event"
     WHERE "id" = $1
@@ -88,6 +114,7 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 	var references StringSlice
 	var actors StringSlice
 	var tags StringSlice
+
 	temp := []byte{}
 
 	err = tx.Stmt(p.selectbyid).QueryRow(id).Scan(
