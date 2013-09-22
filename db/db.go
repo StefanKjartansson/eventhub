@@ -3,25 +3,54 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
 	"log"
 	"strings"
-    "github.com/StefanKjartansson/eventhub"
 )
 
 const (
-	insertStatement = `
+	insertSQL = `
     INSERT INTO
         "event"
-        ("key", "created", "payload", "description", "importance", "origin",
+        ("key", "created", "updated", "payload", "description", "importance", "origin",
          "entities", "other_references", "actors", "tags")
     VALUES
-        ($1, $2, $3, $4, $5, $6, ARRAY[$7], ARRAY[$8], ARRAY[$9], ARRAY[$10])
+        (
+            $1,
+            now(),
+            now(),
+            $2,
+            $3,
+            $4,
+            $5,
+            ARRAY[$6],
+            ARRAY[$7],
+            ARRAY[$8],
+            ARRAY[$9])
     RETURNING "id";
     `
 
-    selectById = `
-    SELECT "id", "key", "created", "payload", "description", "importance",
+	updateSQL = `
+    UPDATE "event"
+    SET
+        "key" = $1,
+        "payload" = $2,
+        "description" = $3,
+        "importance" = $4,
+        "origin" = $5,
+        "entities" = ARRAY[$6],
+        "other_references" = ARRAY[$7],
+        "actors" = ARRAY[$8],
+        "tags" = ARRAY[$9],
+        "updated" = now()
+    WHERE
+        "id" = $10
+    RETURNING "updated";
+    `
+
+	selectByIdSQL = `
+    SELECT "id", "key", "created", "updated", "payload", "description", "importance",
         "origin", "entities", "other_references", "actors", "tags"
     FROM
         "event"
@@ -32,6 +61,7 @@ const (
 type PostgresDataSource struct {
 	pg         *sql.DB
 	insert     *sql.Stmt
+	update     *sql.Stmt
 	selectbyid *sql.Stmt
 }
 
@@ -58,12 +88,14 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 	var references StringSlice
 	var actors StringSlice
 	var tags StringSlice
+	temp := []byte{}
 
 	err = tx.Stmt(p.selectbyid).QueryRow(id).Scan(
 		&e.ID,
 		&e.Key,
 		&e.Created,
-		&e.Payload,
+		&e.Updated,
+		&temp,
 		&e.Description,
 		&e.Importance,
 		&e.Origin,
@@ -76,6 +108,14 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 		return nil, err
 	}
 
+	var data interface{}
+	err = json.Unmarshal(temp, &data)
+
+	if err != nil {
+		return nil, err
+	}
+
+	e.Payload = data
 	e.Entities = entities
 	e.OtherReferences = references
 	e.Actors = actors
@@ -103,10 +143,12 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 	}()
 
 	b, err := json.Marshal(e.Payload)
+	if err != nil {
+		return err
+	}
 
-	err = tx.Stmt(p.insert).QueryRow(
+	args := []interface{}{
 		e.Key,
-		e.Created,
 		b,
 		e.Description,
 		e.Importance,
@@ -114,7 +156,17 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 		strings.Join(e.Entities, ", "),
 		strings.Join(e.OtherReferences, ", "),
 		strings.Join(e.Actors, ", "),
-		strings.Join(e.Tags, ", ")).Scan(&e.ID)
+		strings.Join(e.Tags, ", "),
+	}
+
+	switch e.ID {
+	case 0:
+		err = tx.Stmt(p.insert).QueryRow(args...).Scan(&e.ID)
+	default:
+		args := append(args, e.ID)
+		err = tx.Stmt(p.update).QueryRow(args...).Scan(&e.Updated)
+	}
+
 	if err != nil {
 		return err
 	}
@@ -135,17 +187,23 @@ func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 
 	bootstrapDatabase(p.pg)
 
-	s, err := pg.Prepare(insertStatement)
+	s, err := pg.Prepare(insertSQL)
 	if err != nil {
 		return &p, err
 	}
 	p.insert = s
 
-	s, err = pg.Prepare(selectById)
+	s, err = pg.Prepare(selectByIdSQL)
 	if err != nil {
 		return &p, err
 	}
 	p.selectbyid = s
+
+	s, err = pg.Prepare(updateSQL)
+	if err != nil {
+		return &p, err
+	}
+	p.update = s
 
 	return &p, nil
 }
