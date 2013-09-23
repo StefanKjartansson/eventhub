@@ -9,18 +9,20 @@ import (
 	"strings"
 )
 
-var databackend eventhub.DataBackend
+type RESTService struct {
+	databackend eventhub.DataBackend
+}
 
-func entityHandler(w http.ResponseWriter, r *http.Request) {
+func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
-	vars := mux.Vars(r)
+	vars := mux.Vars(req)
 	entity := vars["entity"]
 	id := vars["id"]
 	filterParams := make(map[string]interface{})
 	filterParams["Entities"] = []string{strings.Join([]string{entity, id}, "/")}
-	events, err := databackend.FilterBy(filterParams)
+	events, err := r.databackend.FilterBy(filterParams)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -28,11 +30,12 @@ func entityHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	enc := json.NewEncoder(w)
 	enc.Encode(events)
+
 }
 
-func postHandler(w http.ResponseWriter, r *http.Request) {
+func (r *RESTService) postHandler(w http.ResponseWriter, req *http.Request) {
 
-	decoder := json.NewDecoder(r.Body)
+	decoder := json.NewDecoder(req.Body)
 	var e eventhub.Event
 	err := decoder.Decode(&e)
 	if err != nil {
@@ -40,7 +43,7 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = databackend.Save(&e)
+	err = r.databackend.Save(&e)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Error", http.StatusInternalServerError)
@@ -49,15 +52,18 @@ func postHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
-func GetRouter(d eventhub.DataBackend) (*mux.Router, error) {
+func (r *RESTService) GetRouter() (*mux.Router, error) {
 
-	databackend = d
-	r := mux.NewRouter()
-	r.HandleFunc("/{entity}/{id}/", entityHandler).Methods("GET")
-	//r.HandleFunc("/{entity}/{id}/search", entitySearchHandler).Methods("GET")
-	r.HandleFunc("/", postHandler).Methods("POST")
-	//r.HandleFunc("/{id}/", retrieveHandler).Methods("GET")
-	//r.HandleFunc("/{id}/", updateHandler).Methods("PUT")
-	//r.HandleFunc("/search", searchHandler).Methods("GET")
-	return r, nil
+	router := mux.NewRouter()
+	router.HandleFunc("/{entity}/{id}/", r.entityHandler).Methods("GET")
+	//router.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
+	router.HandleFunc("/", r.postHandler).Methods("POST")
+	//router.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
+	//router.HandleFunc("/{id}/", r.updateHandler).Methods("PUT")
+	//router.HandleFunc("/search", r.searchHandler).Methods("GET")
+	return router, nil
+}
+
+func NewRESTService(d eventhub.DataBackend) *RESTService {
+	return &RESTService{d}
 }

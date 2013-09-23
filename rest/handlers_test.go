@@ -36,7 +36,8 @@ func startServer() {
 		Entities:    []string{"user/foo"},
 	})
 
-	router, err := GetRouter(d)
+	rest := NewRESTService(d)
+	router, err := rest.GetRouter()
 
 	if err != nil {
 		panic(err)
