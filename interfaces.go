@@ -8,6 +8,4 @@ type DataBackend interface {
 
 type EventFeed interface {
 	Updates() <-chan Event
-	Close() error
-	loop() error
 }
