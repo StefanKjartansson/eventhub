@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -30,6 +31,28 @@ func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	enc := json.NewEncoder(w)
 	enc.Encode(events)
+
+}
+
+func (r *RESTService) retrieveHandler(w http.ResponseWriter, req *http.Request) {
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	vars := mux.Vars(req)
+	id := vars["id"]
+	idAsInt, err := strconv.Atoi(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	event, err := r.databackend.GetById(idAsInt)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	enc := json.NewEncoder(w)
+	enc.Encode(event)
 
 }
 
@@ -58,7 +81,7 @@ func (r *RESTService) GetRouter() (*mux.Router, error) {
 	router.HandleFunc("/{entity}/{id}/", r.entityHandler).Methods("GET")
 	//router.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
 	router.HandleFunc("/", r.postHandler).Methods("POST")
-	//router.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
+	router.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
 	//router.HandleFunc("/{id}/", r.updateHandler).Methods("PUT")
 	//router.HandleFunc("/search", r.searchHandler).Methods("GET")
 	return router, nil

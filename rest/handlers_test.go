@@ -102,6 +102,15 @@ func TestGetByEntity(t *testing.T) {
 	log.Printf("%v", events)
 }
 
+func TestGetById(t *testing.T) {
+	once.Do(startServer)
+
+	url := fmt.Sprintf("http://%s/1/", serverAddr)
+	event := eventhub.Event{}
+	getJSON(t, url, &event)
+	log.Printf("%v", event)
+}
+
 func TestPostNewEvent(t *testing.T) {
 	once.Do(startServer)
 
