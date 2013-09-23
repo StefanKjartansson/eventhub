@@ -1,13 +1,100 @@
 package eventhub
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
 )
+
+func bootstrapData(d DataBackend) {
+
+	r := rand.New(rand.NewSource(5))
+
+	keys := make(map[int]string)
+	keys[0] = "bar"
+	keys[1] = "baz"
+	keys[2] = "boo"
+
+	actors := make(map[int][]string)
+	actors[0] = []string{"employee1"}
+	actors[1] = []string{"employee1", ""}
+	actors[2] = []string{"employee1"}
+	actors[3] = []string{"employee1"}
+	actors[4] = []string{"employee1"}
+
+	for i := 0; i < 20; i++ {
+
+		actors := []string{}
+		for j := 0; j < i; j++ {
+			actors = append(actors, fmt.Sprintf("employee%d", j))
+		}
+
+		_ = d.Save(&Event{
+			Key:         "foo." + keys[r.Intn(len(keys))],
+			Description: "ba ba",
+			Importance:  r.Intn(5),
+			Origin:      "mysystem",
+			Entities:    []string{"ns/foo", "ns/moo"},
+			Actors:      actors,
+		})
+	}
+
+}
+
+func FilterByTest(t *testing.T, d DataBackend) {
+
+	bootstrapData(d)
+
+	m := make(map[string]interface{})
+	m["Origin"] = "mysystem"
+
+	evs, err := d.FilterBy(m)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(evs) != 20 {
+		t.Fatal("Filter results count should've been 20")
+	}
+
+	if evs[0].Origin != "mysystem" {
+		t.Fatal("Origin not expected")
+	}
+
+	delete(m, "Origin")
+
+	for i := 0; i < 20; i++ {
+
+		expected := 20 - i
+		actors := []string{}
+		for j := 0; j < i; j++ {
+			actors = append(actors, fmt.Sprintf("employee%d", j))
+		}
+		m["actors"] = actors
+
+		if len(actors) == 0 {
+			expected = 20
+		}
+
+		evs, err = d.FilterBy(m)
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if len(evs) != expected {
+			t.Fatalf("Expected %d, got %d. actors: %v", expected, len(evs), actors)
+		}
+
+	}
+
+}
 
 func RunDataBackendTest(t *testing.T, d DataBackend) {
 
 	data := struct {
-		Foo string
+		Foo string `json:"foo"`
 	}{
 		"bar",
 	}
@@ -24,18 +111,16 @@ func RunDataBackendTest(t *testing.T, d DataBackend) {
 
 	err := d.Save(&e)
 	if err != nil {
-		t.Error("PostgresDataSource has error:", err)
-		return
+		t.Fatal(err)
 	}
 
 	if e.ID != 1 {
-		t.Errorf("Expected '%d', got %v", 1, e.ID)
+		t.Fatal("Expected '%d', got %v", 1, e.ID)
 	}
 
 	newE, err := d.GetById(1)
 	if err != nil {
-		t.Error("PostgresDataSource has error:", err)
-		return
+		t.Fatal(err)
 	}
 
 	t.Logf("%v", newE)
@@ -43,14 +128,12 @@ func RunDataBackendTest(t *testing.T, d DataBackend) {
 	newE.Description = "New Description"
 	err = d.Save(newE)
 	if err != nil {
-		t.Error("PostgresDataSource has error:", err)
-		return
+		t.Fatal(err)
 	}
 
 	updated, err := d.GetById(1)
 	if updated.Description != newE.Description {
-		t.Error("PostgresDataSource has error:", err)
-		return
+		t.Fatal(err)
 	}
 
 	err = d.Save(&Event{
@@ -62,31 +145,8 @@ func RunDataBackendTest(t *testing.T, d DataBackend) {
 		Entities:    []string{"ns/foo", "ns/moo"},
 		Actors:      []string{"someone"},
 	})
-	if err != nil {
-		t.Error("PostgresDataSource has error:", err)
-		return
-	}
-
-	m := make(map[string]interface{})
-	//m["Key"] = "foo.*"
-	m["Origin"] = "mysystem"
-
-	evs, err := d.FilterBy(m)
-
-	t.Log(evs)
 
 	if err != nil {
-		t.Error("PostgresDataSource has error:", err)
-		return
-	}
-
-	if len(evs) != 2 {
-		t.Error("Filter results count should've been 2")
-		return
-	}
-
-	if evs[0].Origin != "mysystem" {
-		t.Error("Origin not expected")
-		return
+		t.Fatal(err)
 	}
 }
