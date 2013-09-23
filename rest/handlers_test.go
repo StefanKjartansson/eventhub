@@ -1,6 +1,7 @@
 package rest
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
@@ -13,6 +14,7 @@ import (
 
 var serverAddr string
 var once sync.Once
+var client *http.Client
 
 func startServer() {
 
@@ -44,13 +46,15 @@ func startServer() {
 	server := httptest.NewServer(nil)
 	serverAddr = server.Listener.Addr().String()
 	log.Print("Test Server running on ", serverAddr)
+	client = http.DefaultClient
+	log.Print("Test Client created")
 }
 
-func testRequest(t *testing.T, url string, v interface{}) {
+func getJSON(t *testing.T, url string, v interface{}) {
 
 	t.Logf("[GET]: %s\n", url)
 
-	r, err := http.Get(url)
+	r, err := client.Get(url)
 
 	if err != nil {
 		t.Errorf("Error: %v\n", err)
@@ -68,11 +72,50 @@ func testRequest(t *testing.T, url string, v interface{}) {
 	}
 }
 
+func postJSON(t *testing.T, url string, v interface{}) *http.Response {
+
+	t.Logf("[POST]: %s\n", url)
+
+	buf, err := json.Marshal(v)
+	if err != nil {
+		t.Errorf("Unable to serialize %v to json", v)
+	}
+
+	log.Printf("Posting JSON: %s", string(buf))
+
+	r, err := client.Post(url, "application/json", bytes.NewReader(buf))
+
+	if err != nil {
+		t.Errorf("Error when posting to %s, error: %v", url, err)
+	}
+
+	return r
+}
+
 func TestGetByEntity(t *testing.T) {
 	once.Do(startServer)
 
 	url := fmt.Sprintf("http://%s/user/foo/", serverAddr)
 	events := []eventhub.Event{}
-	testRequest(t, url, &events)
+	getJSON(t, url, &events)
 	log.Printf("%v", events)
+}
+
+func TestPostNewEvent(t *testing.T) {
+	once.Do(startServer)
+
+	e := eventhub.Event{
+		Key:         "myapp.user.delete",
+		Description: "User foobar deleted",
+		Importance:  3,
+		Origin:      "myapp",
+		Entities:    []string{"user/foo"},
+	}
+
+	url := fmt.Sprintf("http://%s/", serverAddr)
+	r := postJSON(t, url, &e)
+	if r.StatusCode != http.StatusCreated {
+		t.Errorf("Status code expected %d, got %d", http.StatusCreated, r.StatusCode)
+	}
+	log.Print("Post succeded")
 }
