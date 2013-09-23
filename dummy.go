@@ -2,6 +2,7 @@ package eventhub
 
 import (
 	"errors"
+	"reflect"
 	"sync"
 )
 
@@ -47,19 +48,44 @@ func (d *DummyDataSource) Save(e *Event) error {
 	return nil
 }
 
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
 func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
 	d.m.Lock()
 	defer d.m.Unlock()
 	var matched []*Event
-	matchedIndexes := []int{}
 
-	for idx, event := range d.evs {
+	for _, event := range d.evs {
+		r := reflect.ValueOf(event)
+		if r.Kind() == reflect.Ptr {
+			r = r.Elem()
+		}
 		match := false
 		for key, value := range m {
-			//TODO, get field at reflect and DeepEqual 
+			f := r.FieldByName(key)
+			if reflect.DeepEqual(f.Interface(), value) {
+				match = true
+			}
+			if vAsArray, ok := value.([]string); ok {
+				eventData := f.Interface().([]string)
+				allMatch := true
+				for _, s := range vAsArray {
+					if !stringInSlice(s, eventData) {
+						allMatch = false
+					}
+				}
+				match = allMatch
+			}
 		}
 		if match {
-			matchedIndexes = append(matchedIndexes, idx)
+			matched = append(matched, event)
 		}
 	}
 
