@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
-	"strings"
 )
 
 type PostgresDataSource struct {
@@ -80,40 +79,6 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 	}
 	return &e, nil
 
-}
-
-func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
-
-	b, err := json.Marshal(e.Payload)
-	if err != nil {
-		return err
-	}
-
-	args := []interface{}{
-		e.Key,
-		b,
-		e.Description,
-		e.Importance,
-		e.Origin,
-		strings.Join(e.Entities, ", "),
-		strings.Join(e.OtherReferences, ", "),
-		strings.Join(e.Actors, ", "),
-		strings.Join(e.Tags, ", "),
-	}
-
-	switch e.ID {
-	case 0:
-		err = wrapTransaction(p.pg, func(tx *sql.Tx) error {
-			return tx.Stmt(p.insert).QueryRow(args...).Scan(&e.ID, &e.Created, &e.Updated)
-		})
-	default:
-		args := append(args, e.ID)
-		err = wrapTransaction(p.pg, func(tx *sql.Tx) error {
-			return tx.Stmt(p.update).QueryRow(args...).Scan(&e.Updated)
-		})
-	}
-
-	return err
 }
 
 func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
