@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/StefanKjartansson/eventhub"
 	"github.com/gorilla/mux"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -56,11 +57,17 @@ func (r *RESTService) retrieveHandler(w http.ResponseWriter, req *http.Request) 
 
 }
 
-func (r *RESTService) postHandler(w http.ResponseWriter, req *http.Request) {
-
-	decoder := json.NewDecoder(req.Body)
+func (r *RESTService) parseEvent(body io.ReadCloser) (eventhub.Event, error) {
+	decoder := json.NewDecoder(body)
+	defer body.Close()
 	var e eventhub.Event
 	err := decoder.Decode(&e)
+	return e, err
+}
+
+func (r *RESTService) postHandler(w http.ResponseWriter, req *http.Request) {
+
+	e, err := r.parseEvent(req.Body)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -77,9 +84,7 @@ func (r *RESTService) postHandler(w http.ResponseWriter, req *http.Request) {
 
 func (r *RESTService) updateHandler(w http.ResponseWriter, req *http.Request) {
 
-	decoder := json.NewDecoder(req.Body)
-	var e eventhub.Event
-	err := decoder.Decode(&e)
+	e, err := r.parseEvent(req.Body)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
