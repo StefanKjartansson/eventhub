@@ -70,4 +70,6 @@ func TestDB(t *testing.T) {
 	}
 
 	eventhub.RunDataBackendTest(t, p)
+	_, err = db.Exec(`truncate table event;`)
+	eventhub.FilterByTest(t, p)
 }
