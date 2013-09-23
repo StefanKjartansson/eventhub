@@ -11,15 +11,16 @@ type PostgresDataSource struct {
 	pg *sql.DB
 }
 
+//Converts a row to an event
 func scanRow(row *sql.Rows, e *eventhub.Event) error {
-	var err error
+
 	var entities StringSlice
 	var references StringSlice
 	var actors StringSlice
 	var tags StringSlice
 	temp := []byte{}
 
-	err = row.Scan(
+	err := row.Scan(
 		&e.ID,
 		&e.Key,
 		&e.Created,
@@ -51,15 +52,14 @@ func scanRow(row *sql.Rows, e *eventhub.Event) error {
 	e.Tags = tags
 
 	return nil
-
 }
 
+//Gets an event by id
 func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 
 	var e eventhub.Event
-	var err error
 
-	err = wrapTransaction(p.pg, func(tx *sql.Tx) error {
+	err := wrapTransaction(p.pg, func(tx *sql.Tx) error {
 		rows, err := tx.Query(`
         SELECT
             *
@@ -84,6 +84,7 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 
 }
 
+//Creates a new PostgresDataSource
 func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 
 	p := PostgresDataSource{}
@@ -95,6 +96,7 @@ func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 
 	p.pg = pg
 
+	//Runs migrations
 	bootstrapDatabase(p.pg)
 	return &p, nil
 }

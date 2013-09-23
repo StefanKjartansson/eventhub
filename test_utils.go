@@ -55,7 +55,7 @@ func FilterByTest(t *testing.T, d DataBackend) {
 	}
 
 	if len(evs) != 20 {
-		t.Fatal("Filter results count should've been 20")
+		t.Fatal("Filter results count should be 20")
 	}
 
 	if evs[0].Origin != "mysystem" {
@@ -91,7 +91,7 @@ func FilterByTest(t *testing.T, d DataBackend) {
 
 }
 
-func RunDataBackendTest(t *testing.T, d DataBackend) {
+func InsertUpdateTest(t *testing.T, d DataBackend) {
 
 	data := struct {
 		Foo string `json:"foo"`
