@@ -8,10 +8,7 @@ import (
 )
 
 type PostgresDataSource struct {
-	pg         *sql.DB
-	insert     *sql.Stmt
-	update     *sql.Stmt
-	selectbyid *sql.Stmt
+	pg *sql.DB
 }
 
 func scanRow(row *sql.Rows, e *eventhub.Event) error {
@@ -63,7 +60,13 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 	var err error
 
 	err = wrapTransaction(p.pg, func(tx *sql.Tx) error {
-		rows, err := tx.Stmt(p.selectbyid).Query(id)
+		rows, err := tx.Query(`
+        SELECT
+            *
+        FROM
+            "event"
+        WHERE "id" = $1
+        `, id)
 		if err != nil {
 			return err
 		}
@@ -93,24 +96,5 @@ func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 	p.pg = pg
 
 	bootstrapDatabase(p.pg)
-
-	s, err := pg.Prepare(insertSQL)
-	if err != nil {
-		return &p, err
-	}
-	p.insert = s
-
-	s, err = pg.Prepare(selectByIdSQL)
-	if err != nil {
-		return &p, err
-	}
-	p.selectbyid = s
-
-	s, err = pg.Prepare(updateSQL)
-	if err != nil {
-		return &p, err
-	}
-	p.update = s
-
 	return &p, nil
 }
