@@ -74,7 +74,7 @@ func FilterByTest(t *testing.T, d DataBackend) {
 		m["Actors"] = actors
 
 		if len(actors) == 0 {
-			expected = 20
+			continue
 		}
 
 		evs, err = d.FilterBy(m)
