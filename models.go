@@ -6,18 +6,18 @@ import (
 )
 
 type Event struct {
-	ID              int
-	Key             string
-	Created         time.Time
-	Updated         time.Time
-	Payload         interface{}
-	Description     string
-	Importance      int
-	Origin          string
-	Entities        []string
-	OtherReferences []string
-	Actors          []string
-	Tags            []string
+	ID              int         `json:"id"`
+	Key             string      `json:"key"`
+	Created         time.Time   `json:"created"`
+	Updated         time.Time   `json:"updated"`
+	Payload         interface{} `json:"payload"`
+	Description     string      `json:"description"`
+	Importance      int         `json:"importance"`
+	Origin          string      `json:"origin"`
+	Entities        []string    `json:"entities"`
+	OtherReferences []string    `json:"other_references"`
+	Actors          []string    `json:"actors"`
+	Tags            []string    `json:"tags"`
 }
 
 func (e Event) String() string {

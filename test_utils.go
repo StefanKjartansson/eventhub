@@ -71,7 +71,7 @@ func FilterByTest(t *testing.T, d DataBackend) {
 		for j := 0; j < i; j++ {
 			actors = append(actors, fmt.Sprintf("employee%d", j))
 		}
-		m["actors"] = actors
+		m["Actors"] = actors
 
 		if len(actors) == 0 {
 			expected = 20
