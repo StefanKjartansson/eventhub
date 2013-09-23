@@ -2,12 +2,26 @@ package eventhub
 
 import (
 	"errors"
+	"log"
 	"reflect"
+	"sort"
 	"sync"
+	"time"
 )
 
+type Events []*Event
+
+func (e Events) Len() int      { return len(e) }
+func (e Events) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
+
+type ByDate struct{ Events }
+
+func (s ByDate) Less(i, j int) bool {
+	return s.Events[i].Updated.Nanosecond() > s.Events[j].Updated.Nanosecond()
+}
+
 type DummyDataSource struct {
-	evs []*Event
+	evs Events
 	m   sync.Mutex
 }
 
@@ -39,9 +53,13 @@ func (d *DummyDataSource) Save(e *Event) error {
 		if switchIdx == -1 {
 			return errors.New("ID provided but no event found with provided id")
 		}
+		e.Updated = time.Now()
 		d.evs[switchIdx] = e
 	} else {
 		e.ID = len(d.evs) + 1
+		t := time.Now()
+		e.Created = t
+		e.Updated = t
 		d.evs = append(d.evs, e)
 	}
 
@@ -60,7 +78,7 @@ func stringInSlice(a string, list []string) bool {
 func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
 	d.m.Lock()
 	defer d.m.Unlock()
-	var matched []*Event
+	var matched Events
 
 	for _, event := range d.evs {
 		r := reflect.ValueOf(event)
@@ -70,6 +88,8 @@ func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
 		match := false
 		for key, value := range m {
 			f := r.FieldByName(key)
+			//TODO: Emulate ANY
+			log.Printf("field value: %v, query value: %v", f.Interface(), value)
 			if reflect.DeepEqual(f.Interface(), value) {
 				match = true
 			}
@@ -88,6 +108,8 @@ func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
 			matched = append(matched, event)
 		}
 	}
+
+	sort.Sort(ByDate{matched})
 
 	return matched, nil
 }
