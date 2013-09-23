@@ -15,26 +15,31 @@ import (
 var serverAddr string
 var once sync.Once
 var client *http.Client
+var firstEvent eventhub.Event
+var secondEvent eventhub.Event
 
 func startServer() {
 
 	d := eventhub.NewDummyBackend()
 
-	_ = d.Save(&eventhub.Event{
+	firstEvent = eventhub.Event{
 		Key:         "myapp.user.login",
 		Description: "User foobar logged in",
 		Importance:  3,
 		Origin:      "myapp",
 		Entities:    []string{"user/foo"},
-	})
+	}
 
-	_ = d.Save(&eventhub.Event{
+	secondEvent = eventhub.Event{
 		Key:         "myapp.user.logout",
 		Description: "User foobar logged out",
 		Importance:  3,
 		Origin:      "myapp",
 		Entities:    []string{"user/foo"},
-	})
+	}
+
+	_ = d.Save(&firstEvent)
+	_ = d.Save(&secondEvent)
 
 	rest := NewRESTService(d)
 	router, err := rest.GetRouter()
@@ -93,6 +98,32 @@ func postJSON(t *testing.T, url string, v interface{}) *http.Response {
 	return r
 }
 
+func putJSON(t *testing.T, url string, v interface{}) *http.Response {
+
+	t.Logf("[PUT]: %s\n", url)
+
+	buf, err := json.Marshal(v)
+	if err != nil {
+		t.Errorf("Unable to serialize %v to json", v)
+	}
+
+	log.Printf("PUT JSON: %s", string(buf))
+
+	req, err := http.NewRequest("PUT", url, bytes.NewReader(buf))
+
+	if err != nil {
+		t.Errorf("PUT, Error to %s, error: %v", url, err)
+	}
+
+	r, err := client.Do(req)
+
+	if err != nil {
+		t.Errorf("Error when posting to %s, error: %v", url, err)
+	}
+
+	return r
+}
+
 func TestGetByEntity(t *testing.T) {
 	once.Do(startServer)
 
@@ -128,4 +159,16 @@ func TestPostNewEvent(t *testing.T) {
 		t.Errorf("Status code expected %d, got %d", http.StatusCreated, r.StatusCode)
 	}
 	log.Print("Post succeded")
+}
+
+func TestPutEvent(t *testing.T) {
+	once.Do(startServer)
+
+	firstEvent.Description = "baz bar foo"
+	url := fmt.Sprintf("http://%s/1/", serverAddr)
+	r := putJSON(t, url, &firstEvent)
+	if r.StatusCode != http.StatusAccepted {
+		t.Errorf("Status code expected %d, got %d", http.StatusCreated, r.StatusCode)
+	}
+	log.Print("PUT succeded")
 }

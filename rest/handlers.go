@@ -75,6 +75,29 @@ func (r *RESTService) postHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+func (r *RESTService) updateHandler(w http.ResponseWriter, req *http.Request) {
+
+	decoder := json.NewDecoder(req.Body)
+	var e eventhub.Event
+	err := decoder.Decode(&e)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if e.ID == 0 {
+		http.Error(w, "No ID", http.StatusBadRequest)
+		return
+	}
+	err = r.databackend.Save(&e)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
 func (r *RESTService) GetRouter() (*mux.Router, error) {
 
 	router := mux.NewRouter()
@@ -82,7 +105,7 @@ func (r *RESTService) GetRouter() (*mux.Router, error) {
 	//router.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
 	router.HandleFunc("/", r.postHandler).Methods("POST")
 	router.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
-	//router.HandleFunc("/{id}/", r.updateHandler).Methods("PUT")
+	router.HandleFunc("/{id}/", r.updateHandler).Methods("PUT")
 	//router.HandleFunc("/search", r.searchHandler).Methods("GET")
 	return router, nil
 }
