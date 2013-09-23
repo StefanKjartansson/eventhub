@@ -1,6 +1,7 @@
 package eventhub
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -17,4 +18,8 @@ type Event struct {
 	OtherReferences []string
 	Actors          []string
 	Tags            []string
+}
+
+func (e Event) String() string {
+	return fmt.Sprintf("%s, %v, %s, %v, %v", e.Key, e.Created, e.Origin, e.Entities, e.Actors)
 }
