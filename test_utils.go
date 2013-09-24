@@ -89,6 +89,14 @@ func FilterByTest(t *testing.T, d DataBackend) {
 
 	}
 
+	m["Key"] = []string{"foo.bar", "foo.baz", "foo.boo"}
+
+	evs, err = d.FilterBy(m)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }
 
 func InsertUpdateTest(t *testing.T, d DataBackend) {
