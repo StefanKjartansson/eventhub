@@ -10,3 +10,10 @@ type EventFeed interface {
 	Updates() <-chan Event
 	Close() error
 }
+
+type Broadcaster interface {
+	Register(client int)
+	Constrict(client int, parameter, value string) //only broadcast certain events
+	Listen() error
+	Stop() error
+}
