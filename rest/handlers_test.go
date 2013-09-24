@@ -78,72 +78,61 @@ func startServer() {
 	log.Print("Test Client created")
 }
 
-func getJSON(t *testing.T, url string, v interface{}) {
+func makeRequest(t *testing.T, method, url string, v interface{}) *http.Response {
 
-	t.Log("[GET]: %s\n", url)
+	var r *http.Response
 
-	r, err := client.Get(url)
+	t.Logf("[%s]: %s", method, url)
 
-	if err != nil {
-		t.Errorf("Error: %v\n", err)
+	switch method {
+	case "POST", "PUT":
+		buf, err := json.Marshal(v)
+		if err != nil {
+			t.Errorf("Unable to serialize %v to json", v)
+		}
+
+		log.Printf("[%s] JSON: %s", method, string(buf))
+		req, err := http.NewRequest(method, url, bytes.NewReader(buf))
+		req.Header.Add("Content-Type", "application/json")
+		if err != nil {
+			t.Errorf("[%s] %s, error: %v", method, url, err)
+		}
+		r, err = client.Do(req)
+		if err != nil {
+			t.Errorf("Error when posting to %s, error: %v", url, err)
+		}
+	default:
+		r, err := client.Get(url)
+		if err != nil {
+			t.Errorf("Error: %v\n", err)
+		}
+
+		if r.StatusCode != http.StatusOK {
+			t.Errorf("Wrong status code: %d\n", r.StatusCode)
+		}
+
+		dec := json.NewDecoder(r.Body)
+		defer r.Body.Close()
+		err = dec.Decode(v)
+		if err != nil {
+			t.Errorf("Error: %v\n", err)
+		}
 	}
 
-	if r.StatusCode != http.StatusOK {
-		t.Errorf("Wrong status code: %d\n", r.StatusCode)
-	}
+	return r
 
-	dec := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	err = dec.Decode(v)
-	if err != nil {
-		t.Errorf("Error: %v\n", err)
-	}
+}
+
+func getJSON(t *testing.T, url string, v interface{}) *http.Response {
+	return makeRequest(t, "GET", url, v)
 }
 
 func postJSON(t *testing.T, url string, v interface{}) *http.Response {
-
-	t.Logf("[POST]: %s\n", url)
-
-	buf, err := json.Marshal(v)
-	if err != nil {
-		t.Errorf("Unable to serialize %v to json", v)
-	}
-
-	log.Printf("Posting JSON: %s", string(buf))
-
-	r, err := client.Post(url, "application/json", bytes.NewReader(buf))
-
-	if err != nil {
-		t.Errorf("Error when posting to %s, error: %v", url, err)
-	}
-
-	return r
+	return makeRequest(t, "POST", url, v)
 }
 
 func putJSON(t *testing.T, url string, v interface{}) *http.Response {
-
-	t.Logf("[PUT]: %s\n", url)
-
-	buf, err := json.Marshal(v)
-	if err != nil {
-		t.Errorf("Unable to serialize %v to json", v)
-	}
-
-	log.Printf("PUT JSON: %s", string(buf))
-
-	req, err := http.NewRequest("PUT", url, bytes.NewReader(buf))
-
-	if err != nil {
-		t.Errorf("PUT, Error to %s, error: %v", url, err)
-	}
-
-	r, err := client.Do(req)
-
-	if err != nil {
-		t.Errorf("Error when posting to %s, error: %v", url, err)
-	}
-
-	return r
+	return makeRequest(t, "PUT", url, v)
 }
 
 func TestGetByEntity(t *testing.T) {
