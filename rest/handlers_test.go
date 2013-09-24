@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sync"
 	"testing"
 )
@@ -33,7 +34,7 @@ func startServer() {
 	secondEvent = eventhub.Event{
 		Key:         "myapp.user.logout",
 		Description: "User foobar logged out",
-		Importance:  3,
+		Importance:  2,
 		Origin:      "myapp",
 		Entities:    []string{"user/foo"},
 	}
@@ -171,4 +172,42 @@ func TestPutEvent(t *testing.T) {
 		t.Errorf("Status code expected %d, got %d", http.StatusCreated, r.StatusCode)
 	}
 	log.Print("PUT succeded")
+}
+
+func TestSearch(t *testing.T) {
+	once.Do(startServer)
+
+	tests := []struct {
+		Params url.Values
+		Status int
+	}{{
+		Params: url.Values{
+			"key": {"myapp.user.login"},
+		},
+		Status: http.StatusOK,
+	}, {
+		Params: url.Values{
+			"Key": {"myapp.user.login"},
+		},
+		Status: http.StatusOK,
+	}, {
+		Params: url.Values{
+			"key": {"myapp.user.login", "myapp.user.logout"},
+		},
+		Status: http.StatusOK,
+	}}
+
+	for _, test := range tests {
+		url := fmt.Sprintf("http://%s/search?%s", serverAddr, test.Params.Encode())
+		results := []eventhub.Event{}
+		getJSON(t, url, &results)
+	}
+
+	values := url.Values{
+		"key": {"myapp.user.login", "myapp.user.logout"},
+	}
+	url := fmt.Sprintf("http://%s/user/foo/search?%s", serverAddr, values.Encode())
+	results := []eventhub.Event{}
+	getJSON(t, url, &results)
+
 }

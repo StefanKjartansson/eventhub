@@ -7,8 +7,10 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type RESTService struct {
@@ -103,15 +105,70 @@ func (r *RESTService) updateHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+func UpcaseInitial(str string) string {
+	for i, v := range str {
+		return string(unicode.ToUpper(v)) + str[i+1:]
+	}
+	return ""
+}
+
+func (r *RESTService) search(v url.Values, entity string) ([]*eventhub.Event, error) {
+	filterParams := make(map[string]interface{})
+	for key, value := range v {
+		filterParams[UpcaseInitial(key)] = value
+	}
+	if entity != "" {
+		filterParams["Entities"] = []string{entity}
+	}
+	return r.databackend.FilterBy(filterParams)
+}
+
+func (r *RESTService) searchHandler(w http.ResponseWriter, req *http.Request) {
+	v := req.URL.Query()
+	events, err := r.search(v, "")
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(events) == 0 {
+		http.NotFound(w, req)
+		return
+	}
+	enc := json.NewEncoder(w)
+	enc.Encode(events)
+}
+
+func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Request) {
+
+	v := req.URL.Query()
+	vars := mux.Vars(req)
+	entity := vars["entity"]
+	id := vars["id"]
+
+	events, err := r.search(v, strings.Join([]string{entity, id}, "/"))
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if len(events) == 0 {
+		http.NotFound(w, req)
+		return
+	}
+	enc := json.NewEncoder(w)
+	enc.Encode(events)
+}
+
 func (r *RESTService) GetRouter() (*mux.Router, error) {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/{entity}/{id}/", r.entityHandler).Methods("GET")
-	//router.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
+	router.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
 	router.HandleFunc("/", r.postHandler).Methods("POST")
 	router.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
 	router.HandleFunc("/{id}/", r.updateHandler).Methods("PUT")
-	//router.HandleFunc("/search", r.searchHandler).Methods("GET")
+	router.HandleFunc("/search", r.searchHandler).Methods("GET")
 	return router, nil
 }
 
