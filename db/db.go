@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
+	"log"
 )
 
 type PostgresDataSource struct {
@@ -58,7 +59,7 @@ func scanRow(row *sql.Rows, e *eventhub.Event) error {
 func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 
 	var e eventhub.Event
-
+	log.Println(id)
 	err := wrapTransaction(p.pg, func(tx *sql.Tx) error {
 		rows, err := tx.Query(`
         SELECT

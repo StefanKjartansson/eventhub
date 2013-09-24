@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
+	"log"
 	"strings"
 )
 
@@ -64,7 +65,8 @@ func (p *PostgresDataSource) FilterBy(m map[string]interface{}) ([]*eventhub.Eve
 		cnt++
 
 	}
-
+	log.Println(buffer.String())
+	log.Println(args)
 	err := wrapTransaction(p.pg, func(tx *sql.Tx) error {
 		rows, err := tx.Query(buffer.String(), args...)
 		defer rows.Close()
@@ -72,12 +74,14 @@ func (p *PostgresDataSource) FilterBy(m map[string]interface{}) ([]*eventhub.Eve
 			var e eventhub.Event
 			err = scanRow(rows, &e)
 			if err != nil {
+				log.Println(err)
 				return err
 			}
 			events = append(events, &e)
 		}
 		return err
 	})
+	log.Println(len(events), err)
 
 	return events, err
 }

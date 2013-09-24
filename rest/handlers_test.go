@@ -2,9 +2,11 @@ package rest
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
+	"github.com/StefanKjartansson/eventhub/db"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -21,7 +23,19 @@ var secondEvent eventhub.Event
 
 func startServer() {
 
-	d := eventhub.NewDummyBackend()
+	const connection = "dbname=teststream host=localhost sslmode=disable"
+	d, err := db.NewPostgresDataSource(connection)
+
+	//d := eventhub.NewDummyBackend()
+	pdb, err := sql.Open("postgres", connection)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = pdb.Exec(`TRUNCATE TABLE event RESTART IDENTITY;`)
+	if err != nil {
+		panic(err)
+	}
 
 	firstEvent = eventhub.Event{
 		Key:         "myapp.user.login",
@@ -39,8 +53,15 @@ func startServer() {
 		Entities:    []string{"user/foo"},
 	}
 
-	_ = d.Save(&firstEvent)
-	_ = d.Save(&secondEvent)
+	err = d.Save(&firstEvent)
+	if err != nil {
+		panic(err)
+	}
+
+	err = d.Save(&secondEvent)
+	if err != nil {
+		panic(err)
+	}
 
 	rest := NewRESTService(d)
 	router, err := rest.GetRouter()
@@ -59,7 +80,7 @@ func startServer() {
 
 func getJSON(t *testing.T, url string, v interface{}) {
 
-	t.Logf("[GET]: %s\n", url)
+	t.Log("[GET]: %s\n", url)
 
 	r, err := client.Get(url)
 
@@ -126,24 +147,29 @@ func putJSON(t *testing.T, url string, v interface{}) *http.Response {
 }
 
 func TestGetByEntity(t *testing.T) {
+	log.Println("TestGetByEntity")
 	once.Do(startServer)
 
 	url := fmt.Sprintf("http://%s/user/foo/", serverAddr)
+	t.Log(url)
 	events := []eventhub.Event{}
 	getJSON(t, url, &events)
 	log.Printf("%v", events)
 }
 
 func TestGetById(t *testing.T) {
+	log.Println("TestGetById")
 	once.Do(startServer)
 
 	url := fmt.Sprintf("http://%s/1/", serverAddr)
+	t.Log(url)
 	event := eventhub.Event{}
 	getJSON(t, url, &event)
 	log.Printf("%v", event)
 }
 
 func TestPostNewEvent(t *testing.T) {
+	log.Println("TestPostNewEvent")
 	once.Do(startServer)
 
 	e := eventhub.Event{
@@ -163,6 +189,7 @@ func TestPostNewEvent(t *testing.T) {
 }
 
 func TestPutEvent(t *testing.T) {
+	log.Println("TestPutEvent")
 	once.Do(startServer)
 
 	firstEvent.Description = "baz bar foo"
@@ -175,6 +202,7 @@ func TestPutEvent(t *testing.T) {
 }
 
 func TestSearch(t *testing.T) {
+	log.Println("TestSearch")
 	once.Do(startServer)
 
 	tests := []struct {
