@@ -87,6 +87,11 @@ func confirmOne(ack, nack chan uint64) {
 
 func TestAMQPFeed(t *testing.T) {
 
+	_, err := amqp.Dial(uri)
+	if err != nil {
+		t.Skip("Skipping amqp test, no rabbitmq available")
+	}
+
 	c, err := NewConsumer(uri, exchange, exchangeType, queue, bindingKey, consumerTag, true, true)
 	if err != nil {
 		t.Logf("%s", err)
