@@ -93,8 +93,14 @@ func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
 			if reflect.DeepEqual(f.Interface(), value) {
 				match = true
 			}
-			if vAsArray, ok := value.([]string); ok {
-				eventData := f.Interface().([]string)
+
+			//field is array
+			fieldValueAsArray, fieldOk := f.Interface().([]string)
+			vAsArray, ok := value.([]string)
+
+			//both are string arrays
+			if ok && fieldOk {
+				eventData := fieldValueAsArray
 				allMatch := true
 				for _, s := range vAsArray {
 					if !stringInSlice(s, eventData) {
@@ -103,6 +109,18 @@ func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
 				}
 				match = allMatch
 			}
+
+			//query field is array and field is a string
+			if !fieldOk && ok {
+				anyMatch := false
+				for _, s := range vAsArray {
+					if !anyMatch && f.Interface().(string) == s {
+						anyMatch = true
+					}
+				}
+				match = anyMatch
+			}
+
 		}
 		if match {
 			matched = append(matched, event)
