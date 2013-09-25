@@ -160,15 +160,15 @@ func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Reque
 	enc.Encode(events)
 }
 
-func (r *RESTService) GetRouter() (*mux.Router, error) {
+func (r *RESTService) GetRouter(prefix string) (*mux.Router, error) {
 
 	router := mux.NewRouter()
-	router.HandleFunc("/{entity}/{id}/", r.entityHandler).Methods("GET")
-	router.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
-	router.HandleFunc("/", r.postHandler).Methods("POST")
-	router.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
-	router.HandleFunc("/{id}/", r.updateHandler).Methods("PUT")
-	router.HandleFunc("/search", r.searchHandler).Methods("GET")
+	router.HandleFunc(prefix+"/{entity}/{id}/", r.entityHandler).Methods("GET")
+	router.HandleFunc(prefix+"/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
+	router.HandleFunc(prefix+"/", r.postHandler).Methods("POST")
+	router.HandleFunc(prefix+"/{id}/", r.retrieveHandler).Methods("GET")
+	router.HandleFunc(prefix+"/{id}/", r.updateHandler).Methods("PUT")
+	router.HandleFunc(prefix+"/search", r.searchHandler).Methods("GET")
 	return router, nil
 }
 

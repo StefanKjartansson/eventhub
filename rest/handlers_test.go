@@ -72,7 +72,7 @@ func startServer() {
 	}
 
 	rest := NewRESTService(d)
-	router, err := rest.GetRouter()
+	router, err := rest.GetRouter("")
 
 	if err != nil {
 		panic(err)
