@@ -152,5 +152,7 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 		})
 	}
 
+	p.ch <- *e
+
 	return err
 }
