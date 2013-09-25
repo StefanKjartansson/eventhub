@@ -2,67 +2,10 @@ package ws
 
 import (
 	"code.google.com/p/go.net/websocket"
-	"fmt"
 	"github.com/StefanKjartansson/eventhub"
 	"log"
 	"net/http"
 )
-
-var maxId int = 0
-
-type Client struct {
-	id     int
-	ws     *websocket.Conn
-	server *Server
-	ch     chan *eventhub.Event
-	doneCh chan bool
-}
-
-func NewClient(ws *websocket.Conn, server *Server) *Client {
-
-	maxId++
-	ch := make(chan *eventhub.Event)
-	doneCh := make(chan bool)
-	return &Client{maxId, ws, server, ch, doneCh}
-}
-
-func (c *Client) listenWrite() {
-	log.Println("Listening write to client")
-	for {
-		select {
-
-		// send message to the client
-		case msg := <-c.ch:
-			log.Println("Send:", msg)
-			websocket.JSON.Send(c.ws, msg)
-
-		// receive done request
-		case <-c.doneCh:
-			log.Println("Send:")
-
-			c.server.Del(c)
-			c.doneCh <- true // for listenRead method
-			return
-		}
-	}
-}
-
-func (c *Client) Listen() {
-	go c.listenWrite()
-}
-
-func (c *Client) Write(msg *eventhub.Event) {
-	log.Println("For client ", msg)
-	websocket.JSON.Send(c.ws, msg)
-	c.ch <- msg
-	select {
-	case c.ch <- msg:
-	default:
-		c.server.Del(c)
-		err := fmt.Errorf("client %d is disconnected.", c.id)
-		c.server.Err(err)
-	}
-}
 
 type Server struct {
 	pattern string
@@ -74,8 +17,8 @@ type Server struct {
 	errCh   chan error
 }
 
-// Create new chat server.
-func NewWebsocketServer(pattern string, feed eventhub.EventFeed) *Server {
+// Create a new Websocket broadcaster
+func NewServer(pattern string, feed eventhub.EventFeed) *Server {
 	clients := make(map[int]*Client)
 	addCh := make(chan *Client)
 	delCh := make(chan *Client)
@@ -101,22 +44,27 @@ func (s *Server) Del(c *Client) {
 	s.delCh <- c
 }
 
+func (s *Server) Done() {
+	s.doneCh <- true
+}
+
 func (s *Server) Err(err error) {
 	s.errCh <- err
 }
 
-func (s *Server) sendAll(e *eventhub.Event) {
+func (s *Server) sendAll(event *eventhub.Event) {
 	for _, c := range s.clients {
-		c.Write(e)
+		if c.filter.Entity == "" || c.filter.Passes(event) {
+			c.Write(event)
+		}
 	}
 }
 
 func (s *Server) Listen() {
 
-	log.Println("Listening server...")
-
 	// websocket handler
 	onConnected := func(ws *websocket.Conn) {
+
 		defer func() {
 			err := ws.Close()
 			if err != nil {
@@ -128,8 +76,8 @@ func (s *Server) Listen() {
 		s.Add(client)
 		client.Listen()
 	}
+
 	http.Handle(s.pattern, websocket.Handler(onConnected))
-	log.Println("Created handler")
 
 	for {
 		select {
@@ -145,12 +93,13 @@ func (s *Server) Listen() {
 			log.Println("Delete client")
 			delete(s.clients, c.id)
 
+		// consume event feed
+		case event := <-s.feed.Updates():
+			log.Println("Send all:", event)
+			s.sendAll(&event)
+
 		case err := <-s.errCh:
 			log.Println("Error:", err.Error())
-
-		case e := <-s.feed.Updates():
-			log.Println("Got event")
-			s.sendAll(&e)
 
 		case <-s.doneCh:
 			return
