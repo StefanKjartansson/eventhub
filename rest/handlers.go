@@ -173,5 +173,6 @@ func (r *RESTService) GetRouter() (*mux.Router, error) {
 }
 
 func NewRESTService(d eventhub.DataBackend) *RESTService {
+
 	return &RESTService{d}
 }
