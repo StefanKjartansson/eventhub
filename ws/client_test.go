@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -38,7 +37,6 @@ func startEchoServer() {
 	http.Handle("/event", websocket.Handler(eventServer))
 	server := httptest.NewServer(nil)
 	echoServerAddr = server.Listener.Addr().String()
-	log.Print("Test WebSocket server listening on ", echoServerAddr)
 }
 
 func TestSimpleEcho(t *testing.T) {
