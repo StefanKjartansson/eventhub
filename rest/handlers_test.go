@@ -18,8 +18,8 @@ import (
 var serverAddr string
 var once sync.Once
 var client *http.Client
-var firstEvent eventhub.Event
-var secondEvent eventhub.Event
+var firstEvent *eventhub.Event
+var secondEvent *eventhub.Event
 
 func startServer() {
 
@@ -45,28 +45,36 @@ func startServer() {
 		panic(err)
 	}
 
-	firstEvent = eventhub.Event{
-		Key:         "myapp.user.login",
-		Description: "User foobar logged in",
-		Importance:  3,
-		Origin:      "myapp",
-		Entities:    []string{"user/foo"},
-	}
+	firstEvent = eventhub.NewEvent(
+		"myapp.user.login",
+		nil,
+		nil,
+		"User foobar logged in",
+		3,
+		"myapp",
+		[]string{"user/foo", "ns/moo"},
+		nil,
+		nil,
+		nil)
 
-	secondEvent = eventhub.Event{
-		Key:         "myapp.user.logout",
-		Description: "User foobar logged out",
-		Importance:  2,
-		Origin:      "myapp",
-		Entities:    []string{"user/foo"},
-	}
+	secondEvent = eventhub.NewEvent(
+		"myapp.user.logout",
+		nil,
+		nil,
+		"User foobar logged out",
+		2,
+		"myapp",
+		[]string{"user/foo", "ns/moo"},
+		nil,
+		nil,
+		nil)
 
-	err = d.Save(&firstEvent)
+	err = d.Save(firstEvent)
 	if err != nil {
 		panic(err)
 	}
 
-	err = d.Save(&secondEvent)
+	err = d.Save(secondEvent)
 	if err != nil {
 		panic(err)
 	}
