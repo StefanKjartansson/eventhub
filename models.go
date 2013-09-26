@@ -8,6 +8,7 @@ import (
 type Event struct {
 	ID              int         `json:"id"`
 	Key             string      `json:"key"`
+	KeyParams       interface{} `json:"key_params"`
 	Created         time.Time   `json:"created"`
 	Updated         time.Time   `json:"updated"`
 	Payload         interface{} `json:"payload"`
@@ -18,6 +19,23 @@ type Event struct {
 	OtherReferences []string    `json:"other_references"`
 	Actors          []string    `json:"actors"`
 	Tags            []string    `json:"tags"`
+}
+
+func NewEvent(key string, keyParams interface{}, payload interface{}, description string, importance int,
+	origin string, entities []string, otherReferences []string, actors []string, tags []string) *Event {
+
+	return &Event{
+		Key:             key,
+		KeyParams:       keyParams,
+		Created:         time.Now(),
+		Description:     description,
+		Importance:      importance,
+		Origin:          origin,
+		Entities:        entities,
+		OtherReferences: otherReferences,
+		Actors:          actors,
+		Tags:            tags,
+	}
 }
 
 func (e Event) String() string {
