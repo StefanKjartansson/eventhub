@@ -18,7 +18,7 @@ const (
 	lifetime     = 0
 )
 
-func publish(amqpURI, exchange, exchangeType, routingKey string, event eventhub.Event, reliable, durable, auto_delete bool) error {
+func publish(amqpURI, exchange, exchangeType, routingKey string, event *eventhub.Event, reliable, durable, auto_delete bool) error {
 
 	b, err := json.Marshal(event)
 	if err != nil {
@@ -99,14 +99,17 @@ func TestAMQPFeed(t *testing.T) {
 
 	t.Logf("%v", c)
 
-	e := eventhub.Event{
-		Key:         "foo.bar",
-		Description: "My event",
-		Importance:  3,
-		Origin:      "mysystem",
-		Entities:    []string{"ns/foo", "ns/moo"},
-		Actors:      []string{"someone"},
-	}
+	e := eventhub.NewEvent(
+		"foo.bar",
+		nil,
+		nil,
+		"My event",
+		3,
+		"mysystem",
+		[]string{"ns/foo", "ns/bar"},
+		[]string{"someone"},
+		nil,
+		nil)
 
 	err = publish(uri, exchange, exchangeType, bindingKey, e, true, true, true)
 
