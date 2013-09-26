@@ -20,13 +20,13 @@ func (s ByDate) Less(i, j int) bool {
 	return s.Events[i].Updated.Nanosecond() > s.Events[j].Updated.Nanosecond()
 }
 
-type DummyDataSource struct {
+type LocalMemoryStore struct {
 	evs Events
 	m   sync.Mutex
 	ch  chan *Event
 }
 
-func (d *DummyDataSource) GetById(id int) (*Event, error) {
+func (d *LocalMemoryStore) GetById(id int) (*Event, error) {
 
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -39,7 +39,7 @@ func (d *DummyDataSource) GetById(id int) (*Event, error) {
 	return nil, errors.New("No event found")
 }
 
-func (d *DummyDataSource) Save(e *Event) error {
+func (d *LocalMemoryStore) Save(e *Event) error {
 
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -69,11 +69,11 @@ func (d *DummyDataSource) Save(e *Event) error {
 	return nil
 }
 
-func (d *DummyDataSource) Updates() <-chan *Event {
+func (d *LocalMemoryStore) Updates() <-chan *Event {
 	return d.ch
 }
 
-func (d *DummyDataSource) Close() error {
+func (d *LocalMemoryStore) Close() error {
 	return nil
 }
 
@@ -86,7 +86,7 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
-func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
+func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) {
 	d.m.Lock()
 	defer d.m.Unlock()
 	var matched Events
@@ -143,14 +143,14 @@ func (d *DummyDataSource) FilterBy(m map[string]interface{}) ([]*Event, error) {
 	return matched, nil
 }
 
-func (d *DummyDataSource) Clear() {
+func (d *LocalMemoryStore) Clear() {
 	d.m.Lock()
 	defer d.m.Unlock()
 	d.evs = nil
 }
 
-func NewDummyBackend() *DummyDataSource {
-	d := DummyDataSource{}
+func NewLocalMemoryStore() *LocalMemoryStore {
+	d := LocalMemoryStore{}
 	d.ch = make(chan *Event)
 	return &d
 }

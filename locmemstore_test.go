@@ -6,7 +6,7 @@ import (
 
 func TestDummyBackend(t *testing.T) {
 
-	d := NewDummyBackend()
+	d := NewLocalMemoryStore()
 	InsertUpdateTest(t, d)
 	d.Clear()
 	FilterByTest(t, d)
