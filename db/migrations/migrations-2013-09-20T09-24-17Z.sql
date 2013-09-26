@@ -1,6 +1,7 @@
 CREATE TABLE event (
     id serial NOT NULL PRIMARY KEY,
     key varchar(256) NOT NULL,
+    key_params json NOT NULL,
     created timestamp with time zone NOT NULL,
     updated timestamp with time zone NOT NULL,
     payload json NOT NULL,

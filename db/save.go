@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
+	"log"
 )
 
 func writeArrayParams(buffer *bytes.Buffer, arrays [][]string, startParam int, keys []string) int {
@@ -56,6 +57,7 @@ func constructInsertQuery(e *eventhub.Event) string {
     INSERT INTO "event"
     (
         "key",
+        "key_params",
         "created",
         "updated",
         "payload",
@@ -70,12 +72,13 @@ func constructInsertQuery(e *eventhub.Event) string {
     VALUES
     (
         $1,
-        now(),
-        now(),
         $2,
+        now(),
+        now(),
         $3,
         $4,
         $5,
+        $6,
     `)
 	writeArrayParams(
 		&buffer,
@@ -85,7 +88,7 @@ func constructInsertQuery(e *eventhub.Event) string {
 			e.Actors,
 			e.Tags,
 		},
-		6,
+		7,
 		nil)
 	buffer.WriteString(`) RETURNING "id", "created", "updated";`)
 	return buffer.String()
@@ -97,10 +100,11 @@ func constructUpdateQuery(e *eventhub.Event) string {
 	buffer.WriteString(`UPDATE "event"
     SET
     "key" = $1,
-    "payload" = $2,
-    "description" = $3,
-    "importance" = $4,
-    "origin" = $5,`)
+    "key_params" = $2,
+    "payload" = $3,
+    "description" = $4,
+    "importance" = $5,
+    "origin" = $6,`)
 
 	nextParam := writeArrayParams(
 		&buffer,
@@ -110,7 +114,7 @@ func constructUpdateQuery(e *eventhub.Event) string {
 			e.Actors,
 			e.Tags,
 		},
-		6,
+		7,
 		[]string{"entities", "other_references", "actors", "tags"})
 
 	buffer.WriteString(fmt.Sprintf(`
@@ -126,8 +130,14 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 		return err
 	}
 
+	b2, err := json.Marshal(e.KeyParams)
+	if err != nil {
+		return err
+	}
+
 	args := []interface{}{
 		e.Key,
+		b2,
 		b,
 		e.Description,
 		e.Importance,
@@ -139,6 +149,9 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 			args = append(args, v)
 		}
 	}
+
+	log.Println(constructInsertQuery(e))
+	log.Println(args)
 
 	switch e.ID {
 	case 0:

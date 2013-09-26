@@ -20,10 +20,12 @@ func scanRow(row *sql.Rows, e *eventhub.Event) error {
 	var actors StringSlice
 	var tags StringSlice
 	temp := []byte{}
+	tempkey := []byte{}
 
 	err := row.Scan(
 		&e.ID,
 		&e.Key,
+		&tempkey,
 		&e.Created,
 		&e.Updated,
 		&temp,
@@ -46,7 +48,15 @@ func scanRow(row *sql.Rows, e *eventhub.Event) error {
 		return err
 	}
 
+	var keydata interface{}
+	err = json.Unmarshal(tempkey, &keydata)
+
+	if err != nil {
+		return err
+	}
+
 	e.Payload = data
+	e.KeyParams = keydata
 	e.Entities = entities
 	e.OtherReferences = references
 	e.Actors = actors
