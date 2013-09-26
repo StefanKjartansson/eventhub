@@ -23,7 +23,7 @@ func (s ByDate) Less(i, j int) bool {
 type DummyDataSource struct {
 	evs Events
 	m   sync.Mutex
-	ch  chan Event
+	ch  chan *Event
 }
 
 func (d *DummyDataSource) GetById(id int) (*Event, error) {
@@ -64,12 +64,12 @@ func (d *DummyDataSource) Save(e *Event) error {
 		d.evs = append(d.evs, e)
 	}
 
-	d.ch <- *e
+	d.ch <- e
 
 	return nil
 }
 
-func (d *DummyDataSource) Updates() <-chan Event {
+func (d *DummyDataSource) Updates() <-chan *Event {
 	return d.ch
 }
 
@@ -151,6 +151,6 @@ func (d *DummyDataSource) Clear() {
 
 func NewDummyBackend() *DummyDataSource {
 	d := DummyDataSource{}
-	d.ch = make(chan Event)
+	d.ch = make(chan *Event)
 	return &d
 }

@@ -1,7 +1,7 @@
 package eventhub
 
 type EventFeed interface {
-	Updates() <-chan Event
+	Updates() <-chan *Event
 	Close() error
 }
 

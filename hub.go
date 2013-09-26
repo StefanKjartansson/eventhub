@@ -2,7 +2,7 @@ package eventhub
 
 type merge struct {
 	feeds   []EventFeed
-	updates chan Event
+	updates chan *Event
 	quit    chan struct{}
 	errs    chan error
 }
@@ -10,14 +10,14 @@ type merge struct {
 func Merge(feeds ...EventFeed) EventFeed {
 	m := &merge{
 		feeds:   feeds,
-		updates: make(chan Event),
+		updates: make(chan *Event),
 		quit:    make(chan struct{}),
 		errs:    make(chan error),
 	}
 	for _, feed := range feeds {
 		go func(f EventFeed) {
 			for {
-				var it Event
+				var it *Event
 				select {
 				case it = <-f.Updates():
 				case <-m.quit: // HL
@@ -36,7 +36,7 @@ func Merge(feeds ...EventFeed) EventFeed {
 	return m
 }
 
-func (m *merge) Updates() <-chan Event {
+func (m *merge) Updates() <-chan *Event {
 	return m.updates
 }
 
