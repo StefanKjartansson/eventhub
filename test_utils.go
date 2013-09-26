@@ -29,14 +29,18 @@ func bootstrapData(d DataBackend) {
 			actors = append(actors, fmt.Sprintf("employee%d", j))
 		}
 
-		_ = d.Save(&Event{
-			Key:         "foo." + keys[r.Intn(len(keys))],
-			Description: "ba ba",
-			Importance:  r.Intn(5),
-			Origin:      "mysystem",
-			Entities:    []string{"ns/foo", "ns/moo"},
-			Actors:      actors,
-		})
+		_ = d.Save(NewEvent(
+			"foo."+keys[r.Intn(len(keys))],
+			nil,
+			nil,
+			"ba ba",
+			r.Intn(5),
+			"mysystem",
+			[]string{"ns/foo", "ns/moo"},
+			nil,
+			actors,
+			nil))
+
 	}
 
 }
@@ -116,17 +120,19 @@ func InsertUpdateTest(t *testing.T, d DataBackend) {
 		"bar",
 	}
 
-	e := Event{
-		Key:         "foo.bar",
-		Payload:     data,
-		Description: "My event",
-		Importance:  3,
-		Origin:      "mysystem",
-		Entities:    []string{"ns/foo", "ns/moo"},
-		Actors:      []string{"someone"},
-	}
+	e := NewEvent(
+		"foo.bar",
+		nil,
+		data,
+		"My event",
+		3,
+		"mysystem",
+		[]string{"ns/foo", "ns/moo"},
+		nil,
+		[]string{"someone"},
+		nil)
 
-	err := d.Save(&e)
+	err := d.Save(e)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,15 +159,17 @@ func InsertUpdateTest(t *testing.T, d DataBackend) {
 		t.Fatal(err)
 	}
 
-	err = d.Save(&Event{
-		Key:         "foo.baz",
-		Payload:     data,
-		Description: "My event 2",
-		Importance:  3,
-		Origin:      "mysystem",
-		Entities:    []string{"ns/foo", "ns/moo"},
-		Actors:      []string{"someone"},
-	})
+	err = d.Save(NewEvent(
+		"foo.baz",
+		nil,
+		data,
+		"My event 2",
+		3,
+		"mysystem",
+		[]string{"ns/foo", "ns/moo"},
+		nil,
+		[]string{"someone"},
+		nil))
 
 	if err != nil {
 		t.Fatal(err)
