@@ -9,7 +9,7 @@ import (
 
 type PostgresDataSource struct {
 	pg *sql.DB
-	ch chan eventhub.Event
+	ch chan *eventhub.Event
 }
 
 //Converts a row to an event
@@ -95,7 +95,7 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 
 }
 
-func (d *PostgresDataSource) Updates() <-chan eventhub.Event {
+func (d *PostgresDataSource) Updates() <-chan *eventhub.Event {
 	return d.ch
 }
 
@@ -114,7 +114,7 @@ func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 	}
 
 	p.pg = pg
-	p.ch = make(chan eventhub.Event)
+	p.ch = make(chan *eventhub.Event)
 
 	//Runs migrations
 	bootstrapDatabase(p.pg)
