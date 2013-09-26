@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 func bootstrapData(d DataBackend) {
@@ -101,6 +102,19 @@ func FilterByTest(t *testing.T, d DataBackend) {
 		t.Fatal(err)
 	}
 
+	//Test that ordering is correct
+	var ti time.Time
+	for idx, e := range evs {
+		if idx == 0 {
+			ti = e.Updated
+			continue
+		}
+		// newest one should be first
+		if e.Updated.UnixNano() > ti.UnixNano() {
+			t.Fatalf("Expected events to have been ordering in descending order: %s, got %s", ti, e.Updated)
+		}
+		ti = e.Updated
+	}
 }
 
 func InsertUpdateTest(t *testing.T, d DataBackend) {
