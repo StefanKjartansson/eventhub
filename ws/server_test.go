@@ -51,14 +51,19 @@ func TestWebSocketBroadcaster(t *testing.T) {
 	fm := FilterMessage{"ns/moo"}
 	websocket.JSON.Send(conn, fm)
 
-	e := eventhub.Event{
-		Key:         "foo.bar",
-		Description: "ba ba",
-		Importance:  3,
-		Origin:      "mysystem",
-		Entities:    []string{"ns/foo", "ns/moo"},
-	}
-	d.events <- e
+	e := eventhub.NewEvent(
+		"myapp.user.login",
+		nil,
+		nil,
+		"User foobar logged in",
+		3,
+		"myapp",
+		[]string{"ns/foo", "ns/moo"},
+		nil,
+		nil,
+		nil)
+
+	d.events <- *e
 
 	var event eventhub.Event
 	if err := websocket.JSON.Receive(conn, &event); err != nil {
@@ -68,21 +73,29 @@ func TestWebSocketBroadcaster(t *testing.T) {
 	incoming := make(chan eventhub.Event)
 	go readEvents(conn, incoming)
 
-	d.events <- eventhub.Event{
-		Key:         "Should filter",
-		Description: "ba ba",
-		Importance:  3,
-		Origin:      "mysystem",
-		Entities:    []string{"ns/foo", "ns/boo"},
-	}
+	d.events <- *eventhub.NewEvent(
+		"Should filter",
+		nil,
+		nil,
+		"This event should be filtered",
+		3,
+		"myapp",
+		[]string{"ns/foo", "ns/boo"},
+		nil,
+		nil,
+		nil)
 
-	d.events <- eventhub.Event{
-		Key:         "foo.bar",
-		Description: "ba ba",
-		Importance:  3,
-		Origin:      "mysystem",
-		Entities:    []string{"ns/foo", "ns/moo"},
-	}
+	d.events <- *eventhub.NewEvent(
+		"foo.bar",
+		nil,
+		nil,
+		"This event should pass",
+		3,
+		"myapp",
+		[]string{"ns/foo", "ns/moo"},
+		nil,
+		nil,
+		nil)
 
 	ev := <-incoming
 
