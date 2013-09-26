@@ -96,7 +96,7 @@ func (s *Server) Listen() {
 		// consume event feed
 		case event := <-s.feed.Updates():
 			log.Println("Send all:", event)
-			s.sendAll(&event)
+			s.sendAll(event)
 
 		case err := <-s.errCh:
 			log.Println("Error:", err.Error())

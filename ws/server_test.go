@@ -18,10 +18,10 @@ var once sync.Once
 var d DummyFeed
 
 type DummyFeed struct {
-	events chan eventhub.Event
+	events chan *eventhub.Event
 }
 
-func (d *DummyFeed) Updates() <-chan eventhub.Event {
+func (d *DummyFeed) Updates() <-chan *eventhub.Event {
 	return d.events
 }
 
@@ -30,7 +30,7 @@ func (d *DummyFeed) Close() error {
 }
 
 func startServer() {
-	d = DummyFeed{make(chan eventhub.Event)}
+	d = DummyFeed{make(chan *eventhub.Event)}
 	s := NewServer("/ws", &d)
 	go s.Listen()
 	server := httptest.NewServer(nil)
@@ -63,7 +63,7 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		nil,
 		nil)
 
-	d.events <- *e
+	d.events <- e
 
 	var event eventhub.Event
 	if err := websocket.JSON.Receive(conn, &event); err != nil {
@@ -73,7 +73,7 @@ func TestWebSocketBroadcaster(t *testing.T) {
 	incoming := make(chan eventhub.Event)
 	go readEvents(conn, incoming)
 
-	d.events <- *eventhub.NewEvent(
+	d.events <- eventhub.NewEvent(
 		"Should filter",
 		nil,
 		nil,
@@ -85,7 +85,7 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		nil,
 		nil)
 
-	d.events <- *eventhub.NewEvent(
+	d.events <- eventhub.NewEvent(
 		"foo.bar",
 		nil,
 		nil,
