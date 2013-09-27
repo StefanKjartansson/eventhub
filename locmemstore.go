@@ -2,7 +2,6 @@ package eventhub
 
 import (
 	"errors"
-	"log"
 	"reflect"
 	"sort"
 	"sync"
@@ -21,7 +20,7 @@ func (s ByDate) Less(i, j int) bool {
 }
 
 type LocalMemoryStore struct {
-	evs Events
+	evs []Event
 	m   sync.Mutex
 	ch  chan *Event
 }
@@ -33,7 +32,7 @@ func (d *LocalMemoryStore) GetById(id int) (*Event, error) {
 
 	for _, e := range d.evs {
 		if e.ID == id {
-			return e, nil
+			return &e, nil
 		}
 	}
 	return nil, errors.New("No event found")
@@ -55,13 +54,13 @@ func (d *LocalMemoryStore) Save(e *Event) error {
 			return errors.New("ID provided but no event found with provided id")
 		}
 		e.Updated = time.Now()
-		d.evs[switchIdx] = e
+		d.evs[switchIdx] = *e
 	} else {
 		e.ID = len(d.evs) + 1
 		t := time.Now()
 		e.Created = t
 		e.Updated = t
-		d.evs = append(d.evs, e)
+		d.evs = append(d.evs, *e)
 	}
 
 	d.ch <- e
@@ -87,11 +86,14 @@ func stringInSlice(a string, list []string) bool {
 }
 
 func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) {
+
 	d.m.Lock()
 	defer d.m.Unlock()
-	var matched Events
 
-	for _, event := range d.evs {
+	var matched []*Event
+
+	for idx, event := range d.evs {
+
 		r := reflect.ValueOf(event)
 		if r.Kind() == reflect.Ptr {
 			r = r.Elem()
@@ -99,8 +101,7 @@ func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) 
 		match := false
 		for key, value := range m {
 			f := r.FieldByName(key)
-			//TODO: Emulate ANY
-			log.Printf("field value: %v, query value: %v", f.Interface(), value)
+
 			if reflect.DeepEqual(f.Interface(), value) {
 				match = true
 			}
@@ -124,8 +125,12 @@ func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) 
 			//query field is array and field is a string
 			if !fieldOk && ok {
 				anyMatch := false
+				asString := f.Interface().(string)
 				for _, s := range vAsArray {
-					if !anyMatch && f.Interface().(string) == s {
+					if anyMatch {
+						continue
+					}
+					if !anyMatch && asString == s {
 						anyMatch = true
 					}
 				}
@@ -134,7 +139,7 @@ func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) 
 
 		}
 		if match {
-			matched = append(matched, event)
+			matched = append(matched, &d.evs[idx])
 		}
 	}
 
