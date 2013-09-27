@@ -24,6 +24,7 @@ before_script:
   - sudo cp ./pg_hba.conf /etc/postgresql/9.2/main
   - sudo /etc/init.d/postgresql start
   - psql -c 'create database teststream;' -U postgres
+  - psql -c 'create role travis superuser;' -U postgres
 
 script:
  - make
