@@ -14,8 +14,10 @@ type DataBackend interface {
 }
 
 type Broadcaster interface {
-	Register(client int)
-	Constrict(client int, parameter, value string) //only broadcast certain events
-	Listen() error
-	Stop() error
+	Broadcast(e *Event) error
+}
+
+type DataService interface {
+	SetBackend(d *DataBackend) error
+	Run() error
 }

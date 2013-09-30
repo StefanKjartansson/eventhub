@@ -1,52 +1,66 @@
 package eventhub
 
-type merge struct {
-	feeds   []EventFeed
-	updates chan *Event
-	quit    chan struct{}
-	errs    chan error
+import (
+	"sync"
+)
+
+type hub struct {
+	application  string
+	m            sync.Mutex
+	feeds        []EventFeed
+	db           DataBackend
+	broadcasters []Broadcaster
+	dataservices []DataService
+	errs         chan error
 }
 
-func Merge(feeds ...EventFeed) EventFeed {
-	m := &merge{
-		feeds:   feeds,
-		updates: make(chan *Event),
-		quit:    make(chan struct{}),
-		errs:    make(chan error),
+func NewHub(application string, d DataBackend) *hub {
+	return &hub{
+		application: application,
+		db:          d,
+		errs:        make(chan error),
 	}
-	for _, feed := range feeds {
-		go func(f EventFeed) {
-			for {
-				var it *Event
-				select {
-				case it = <-f.Updates():
-				case <-m.quit: // HL
-					m.errs <- f.Close() // HL
-					return              // HL
-				}
-				select {
-				case m.updates <- it:
-				case <-m.quit: // HL
-					m.errs <- f.Close() // HL
-					return              // HL
-				}
+}
+
+func (h *hub) AddFeed(e EventFeed) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	h.feeds = append(h.feeds, e)
+}
+
+func (h *hub) AddBroadcaster(b Broadcaster) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	h.broadcasters = append(h.broadcasters, b)
+}
+
+func (h *hub) AddDataService(d DataService) {
+	h.m.Lock()
+	defer h.m.Unlock()
+	h.errs <- d.SetBackend(&h.db)
+	h.dataservices = append(h.dataservices, d)
+}
+
+func (h *hub) Run() {
+
+	merged := Merge(h.feeds...)
+
+	for _, ds := range h.dataservices {
+		go func(d DataService) {
+			h.errs <- ds.Run()
+		}(ds)
+	}
+
+	for {
+		var e *Event
+		select {
+		case e = <-merged.Updates():
+			h.errs <- h.db.Save(e)
+			for _, bc := range h.broadcasters {
+				go func(b Broadcaster) {
+					h.errs <- b.Broadcast(e)
+				}(bc)
 			}
-		}(feed)
-	}
-	return m
-}
-
-func (m *merge) Updates() <-chan *Event {
-	return m.updates
-}
-
-func (m *merge) Close() (err error) {
-	close(m.quit) // HL
-	for _ = range m.feeds {
-		if e := <-m.errs; e != nil { // HL
-			err = e
 		}
 	}
-	close(m.updates) // HL
-	return
 }
