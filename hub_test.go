@@ -16,6 +16,13 @@ func (d DummyFeed) Close() error {
 	return nil
 }
 
+type FakeBroadCaster struct {
+}
+
+func (d FakeBroadCaster) Broadcast(e *Event) error {
+	return nil
+}
+
 func TestHub(t *testing.T) {
 
 	d := NewLocalMemoryStore()
@@ -28,13 +35,9 @@ func TestHub(t *testing.T) {
 	h.AddFeed(df1)
 	h.AddFeed(df2)
 
-	rs := rest.NewRESTService()
-	h.AddFeed(rs)
+	b1 := FakeBroadCaster{}
 
-	h.AddBroadcaster(ws)
-	h.AddBroadcaster(udp)
-
-	h.AddDataService(rest)
+	h.AddBroadcaster(b1)
 
 	h.Run()
 }
