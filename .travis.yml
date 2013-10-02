@@ -6,7 +6,7 @@ install:
  - go get github.com/gorilla/mux
  - go get github.com/gorilla/schema
  - go get github.com/streadway/amqp
- - go get github.com/google/go-querystring
+ - go get github.com/google/go-querystring/query
  - go get code.google.com/p/go.net/websocket
 
 services:
