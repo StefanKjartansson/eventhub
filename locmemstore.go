@@ -2,8 +2,8 @@ package eventhub
 
 import (
 	"errors"
-	"reflect"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -85,7 +85,7 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
-func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) {
+func (d *LocalMemoryStore) Query(q Query) ([]*Event, error) {
 
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -94,50 +94,41 @@ func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) 
 
 	for idx, event := range d.evs {
 
-		r := reflect.ValueOf(event)
-		if r.Kind() == reflect.Ptr {
-			r = r.Elem()
-		}
 		match := false
-		for key, value := range m {
-			f := r.FieldByName(key)
-
-			if reflect.DeepEqual(f.Interface(), value) {
-				match = true
-			}
-
-			//field is array
-			fieldValueAsArray, fieldOk := f.Interface().([]string)
-			vAsArray, ok := value.([]string)
-
-			//both are string arrays
-			if ok && fieldOk {
-				eventData := fieldValueAsArray
-				allMatch := true
-				for _, s := range vAsArray {
-					if !stringInSlice(s, eventData) {
-						allMatch = false
-					}
-				}
-				match = allMatch
-			}
-
-			//query field is array and field is a string
-			if !fieldOk && ok {
-				anyMatch := false
-				asString := f.Interface().(string)
-				for _, s := range vAsArray {
-					if anyMatch {
-						continue
-					}
-					if !anyMatch && asString == s {
-						anyMatch = true
-					}
-				}
-				match = anyMatch
-			}
-
+		if q.Origin != "" && event.Origin == q.Origin {
+			match = true
 		}
+
+		if q.Key != "" {
+			match = false
+			for _, s := range strings.Split(q.Key, "OR") {
+				s = strings.TrimSpace(s)
+				if event.Key == s {
+					match = true
+				}
+			}
+		}
+
+		if len(q.Entities) > 0 {
+			allMatch := true
+			for _, s := range q.Entities {
+				if !stringInSlice(s, event.Entities) {
+					allMatch = false
+				}
+			}
+			match = allMatch
+		}
+
+		if len(q.Actors) > 0 {
+			allMatch := true
+			for _, s := range q.Actors {
+				if !stringInSlice(s, event.Actors) {
+					allMatch = false
+				}
+			}
+			match = allMatch
+		}
+
 		if match {
 			matched = append(matched, &d.evs[idx])
 		}
