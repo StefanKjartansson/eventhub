@@ -50,10 +50,10 @@ func FilterByTest(t *testing.T, d DataBackend) {
 
 	bootstrapData(d)
 
-	m := make(map[string]interface{})
-	m["Origin"] = "mysystem"
+	q := Query{}
+	q.Origin = "mysystem"
 
-	evs, err := d.FilterBy(m)
+	evs, err := d.Query(q)
 
 	if err != nil {
 		t.Fatal(err)
@@ -67,39 +67,43 @@ func FilterByTest(t *testing.T, d DataBackend) {
 		t.Fatal("Origin not expected")
 	}
 
-	delete(m, "Origin")
+	q = Query{}
 
 	for i := 0; i < 20; i++ {
 
 		expected := 20 - i
-		actors := []string{}
 		for j := 0; j < i; j++ {
-			actors = append(actors, fmt.Sprintf("employee%d", j))
+			q.Actors = append(q.Actors, fmt.Sprintf("employee%d", j))
 		}
-		m["Actors"] = actors
 
-		if len(actors) == 0 {
+		if len(q.Actors) == 0 {
 			continue
 		}
 
-		evs, err = d.FilterBy(m)
+		evs, err = d.Query(q)
 
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if len(evs) != expected {
-			t.Fatalf("Expected %d, got %d. actors: %v", expected, len(evs), actors)
+			t.Fatalf("Expected %d, got %d. query: %+v",
+				expected, len(evs), q)
 		}
 
 	}
 
-	m["Key"] = []string{"foo.bar", "foo.baz", "foo.boo"}
+	q = Query{}
+	q.Key = "foo.bar OR foo.baz OR foo.boo"
 
-	evs, err = d.FilterBy(m)
+	evs, err = d.Query(q)
 
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if len(evs) != 20 {
+		t.Fatalf("evs returned %d, expected 20, query:%+v", len(evs), q)
 	}
 
 	//Test that ordering is correct
