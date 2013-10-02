@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
 	"github.com/StefanKjartansson/eventhub/db"
+	"github.com/google/go-querystring/query"
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"sync"
 	"testing"
 )
@@ -211,35 +211,39 @@ func TestSearch(t *testing.T) {
 	once.Do(startServer)
 
 	tests := []struct {
-		Params url.Values
+		Q      eventhub.Query
 		Status int
 	}{{
-		Params: url.Values{
-			"key": {"myapp.user.login"},
+		Q: eventhub.Query{
+			Key: "myapp.user.login",
 		},
 		Status: http.StatusOK,
 	}, {
-		Params: url.Values{
-			"Key": {"myapp.user.login"},
-		},
-		Status: http.StatusOK,
-	}, {
-		Params: url.Values{
-			"key": {"myapp.user.login", "myapp.user.logout"},
+		Q: eventhub.Query{
+			Key: "myapp.user.login OR myapp.user.logout",
 		},
 		Status: http.StatusOK,
 	}}
 
 	for _, test := range tests {
-		url := fmt.Sprintf("http://%s/search?%s", serverAddr, test.Params.Encode())
+		v, err := query.Values(test.Q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		url := fmt.Sprintf("http://%s/search?%s", serverAddr, v.Encode())
 		results := []eventhub.Event{}
 		getJSON(t, url, &results)
 	}
 
-	values := url.Values{
-		"key": {"myapp.user.login", "myapp.user.logout"},
+	q := eventhub.Query{
+		Key: "myapp.user.login OR myapp.user.logout",
 	}
-	url := fmt.Sprintf("http://%s/user/foo/search?%s", serverAddr, values.Encode())
+	v, err := query.Values(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	url := fmt.Sprintf("http://%s/user/foo/search?%s", serverAddr, v.Encode())
 	results := []eventhub.Event{}
 	getJSON(t, url, &results)
 
