@@ -155,12 +155,12 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 
 	switch e.ID {
 	case 0:
-		err = wrapTransaction(p.pg, func(tx *sql.Tx) error {
+		err = p.wrapTransaction(func(tx *sql.Tx) error {
 			return tx.QueryRow(constructInsertQuery(e), args...).Scan(&e.ID, &e.Created, &e.Updated)
 		})
 	default:
 		args := append(args, e.ID)
-		err = wrapTransaction(p.pg, func(tx *sql.Tx) error {
+		err = p.wrapTransaction(func(tx *sql.Tx) error {
 			return tx.QueryRow(constructUpdateQuery(e), args...).Scan(&e.Updated)
 		})
 	}
