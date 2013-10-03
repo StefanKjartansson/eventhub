@@ -11,33 +11,35 @@ type hub struct {
 	db           DataBackend
 	broadcasters []Broadcaster
 	dataservices []DataService
-	errs         chan error
 }
 
 func NewHub(application string, d DataBackend) *hub {
 	return &hub{
 		application: application,
 		db:          d,
-		errs:        make(chan error),
 	}
 }
 
-func (h *hub) AddFeed(e EventFeed) {
+func (h *hub) AddFeeds(efs ...EventFeed) {
 	h.m.Lock()
 	defer h.m.Unlock()
-	h.feeds = append(h.feeds, e)
+	for _, e := range efs {
+		h.feeds = append(h.feeds, e)
+	}
 }
 
-func (h *hub) AddBroadcaster(b Broadcaster) {
+func (h *hub) AddBroadcasters(bcs ...Broadcaster) {
 	h.m.Lock()
 	defer h.m.Unlock()
-	h.broadcasters = append(h.broadcasters, b)
+	for _, b := range bcs {
+		h.broadcasters = append(h.broadcasters, b)
+	}
 }
 
 func (h *hub) AddDataService(d DataService) {
 	h.m.Lock()
 	defer h.m.Unlock()
-	h.errs <- d.SetBackend(&h.db)
+	d.SetBackend(&h.db)
 	h.dataservices = append(h.dataservices, d)
 }
 
@@ -45,22 +47,18 @@ func (h *hub) Run() {
 
 	merged := Merge(h.feeds...)
 
-	for _, ds := range h.dataservices {
-		go func(d DataService) {
-			h.errs <- ds.Run()
-		}(ds)
-	}
-
 	for {
 		var e *Event
 		select {
 		case e = <-merged.Updates():
-			h.errs <- h.db.Save(e)
-			for _, bc := range h.broadcasters {
-				go func(b Broadcaster) {
-					h.errs <- b.Broadcast(e)
-				}(bc)
+			err := h.db.Save(e)
+			if err != nil {
+				err = merged.Close()
+			}
+			for _, b := range h.broadcasters {
+				b.Broadcast(e)
 			}
 		}
 	}
+
 }
