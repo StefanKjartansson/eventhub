@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -92,86 +91,4 @@ func globMigrations() (m Migrations, err error) {
 	sort.Sort(ByAge{m})
 
 	return m, nil
-}
-
-func bootstrapDatabase(db *sql.DB) {
-
-	// Get all table names
-	// TODO: maybe change the schema name?
-
-	rows, err := db.Query(`
-        select tablename
-            from pg_tables
-        where
-            pg_tables.schemaname = 'public';
-    `)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	canMigrate := false
-	var s string
-	for rows.Next() {
-		rows.Scan(&s)
-		if s == "migration_info" {
-			canMigrate = true
-		}
-	}
-
-	//No table names returned
-	if s == "" {
-		canMigrate = true
-	}
-
-	//Get the list of migrations
-	m, err := globMigrations()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	//If there were tables, the migration_info
-	//table should be among them
-	if s != "" {
-		rows, err := db.Query(`
-            select created from
-                migration_info
-            order by created
-        `)
-
-		removalDates := []time.Time{}
-		for rows.Next() {
-			var t time.Time
-			err = rows.Scan(&t)
-			if err != nil {
-				log.Fatal(err)
-			}
-			//Weird, table created with TZ, but Scan doesn't
-			//add the UTC info
-			removalDates = append(removalDates, t.UTC())
-		}
-
-		//Filter out migrations which have already been applied
-		m = m.FilterDates(removalDates)
-	}
-
-	//Run migrations
-	if canMigrate && len(m) > 0 {
-
-		for _, migration := range m {
-
-			_, err := db.Exec(migration.content)
-			if err != nil {
-				log.Fatal(err)
-			}
-			_, err = db.Exec(`
-                insert into migration_info
-                    (created, content)
-                values($1, $2)`, migration.date, migration.content)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-	}
 }
