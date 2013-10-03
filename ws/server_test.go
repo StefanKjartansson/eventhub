@@ -48,8 +48,10 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		return
 	}
 
-	fm := FilterMessage{"ns/moo"}
-	websocket.JSON.Send(conn, fm)
+	q := eventhub.Query{}
+	q.Entities = []string{"ns/moo"}
+	t.Logf("Query filter: %+v", q)
+	websocket.JSON.Send(conn, q)
 
 	e := eventhub.NewEvent(
 		"myapp.user.login",
@@ -73,7 +75,7 @@ func TestWebSocketBroadcaster(t *testing.T) {
 	incoming := make(chan eventhub.Event)
 	go readEvents(conn, incoming)
 
-	d.events <- eventhub.NewEvent(
+	filtered := eventhub.NewEvent(
 		"Should filter",
 		nil,
 		nil,
@@ -84,6 +86,12 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		nil,
 		nil,
 		nil)
+
+	if q.Match(*filtered) == true {
+		t.Errorf("Query %+v should not pass %+v", q, filtered)
+	}
+
+	d.events <- filtered
 
 	d.events <- eventhub.NewEvent(
 		"foo.bar",

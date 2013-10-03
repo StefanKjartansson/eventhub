@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"github.com/StefanKjartansson/eventhub"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"unicode"
@@ -24,9 +24,9 @@ func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	entity := vars["entity"]
 	id := vars["id"]
-	filterParams := make(map[string]interface{})
-	filterParams["Entities"] = []string{strings.Join([]string{entity, id}, "/")}
-	events, err := r.databackend.FilterBy(filterParams)
+	q := eventhub.Query{}
+	q.Entities = append(q.Entities, strings.Join([]string{entity, id}, "/"))
+	events, err := r.databackend.Query(q)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -112,20 +112,25 @@ func UpcaseInitial(str string) string {
 	return ""
 }
 
-func (r *RESTService) search(v url.Values, entity string) ([]*eventhub.Event, error) {
-	filterParams := make(map[string]interface{})
-	for key, value := range v {
-		filterParams[UpcaseInitial(key)] = value
-	}
+func (r *RESTService) search(q eventhub.Query, entity string) ([]*eventhub.Event, error) {
 	if entity != "" {
-		filterParams["Entities"] = []string{entity}
+		q.Entities = append(q.Entities, entity)
 	}
-	return r.databackend.FilterBy(filterParams)
+	return r.databackend.Query(q)
 }
 
 func (r *RESTService) searchHandler(w http.ResponseWriter, req *http.Request) {
-	v := req.URL.Query()
-	events, err := r.search(v, "")
+	req.ParseForm()
+	q := new(eventhub.Query)
+	decoder := schema.NewDecoder()
+	err := decoder.Decode(q, req.Form)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	events, err := r.search(*q, "")
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -141,12 +146,16 @@ func (r *RESTService) searchHandler(w http.ResponseWriter, req *http.Request) {
 
 func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Request) {
 
-	v := req.URL.Query()
+	req.ParseForm()
 	vars := mux.Vars(req)
 	entity := vars["entity"]
 	id := vars["id"]
 
-	events, err := r.search(v, strings.Join([]string{entity, id}, "/"))
+	q := new(eventhub.Query)
+	decoder := schema.NewDecoder()
+	err := decoder.Decode(q, req.Form)
+
+	events, err := r.search(*q, strings.Join([]string{entity, id}, "/"))
 	if err != nil {
 		log.Println(err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)

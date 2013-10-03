@@ -7,10 +7,9 @@ type EventFeed interface {
 
 //Queryable Data store
 type DataBackend interface {
-	EventFeed
 	Save(e *Event) error
 	GetById(id int) (*Event, error)
-	FilterBy(m map[string]interface{}) ([]*Event, error)
+	Query(q Query) ([]*Event, error)
 }
 
 type Broadcaster interface {

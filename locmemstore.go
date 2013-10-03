@@ -2,7 +2,6 @@ package eventhub
 
 import (
 	"errors"
-	"reflect"
 	"sort"
 	"sync"
 	"time"
@@ -22,7 +21,6 @@ func (s ByDate) Less(i, j int) bool {
 type LocalMemoryStore struct {
 	evs []Event
 	m   sync.Mutex
-	ch  chan *Event
 }
 
 func (d *LocalMemoryStore) GetById(id int) (*Event, error) {
@@ -63,29 +61,10 @@ func (d *LocalMemoryStore) Save(e *Event) error {
 		d.evs = append(d.evs, *e)
 	}
 
-	d.ch <- e
-
 	return nil
 }
 
-func (d *LocalMemoryStore) Updates() <-chan *Event {
-	return d.ch
-}
-
-func (d *LocalMemoryStore) Close() error {
-	return nil
-}
-
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
-
-func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) {
+func (d *LocalMemoryStore) Query(q Query) ([]*Event, error) {
 
 	d.m.Lock()
 	defer d.m.Unlock()
@@ -93,52 +72,7 @@ func (d *LocalMemoryStore) FilterBy(m map[string]interface{}) ([]*Event, error) 
 	var matched []*Event
 
 	for idx, event := range d.evs {
-
-		r := reflect.ValueOf(event)
-		if r.Kind() == reflect.Ptr {
-			r = r.Elem()
-		}
-		match := false
-		for key, value := range m {
-			f := r.FieldByName(key)
-
-			if reflect.DeepEqual(f.Interface(), value) {
-				match = true
-			}
-
-			//field is array
-			fieldValueAsArray, fieldOk := f.Interface().([]string)
-			vAsArray, ok := value.([]string)
-
-			//both are string arrays
-			if ok && fieldOk {
-				eventData := fieldValueAsArray
-				allMatch := true
-				for _, s := range vAsArray {
-					if !stringInSlice(s, eventData) {
-						allMatch = false
-					}
-				}
-				match = allMatch
-			}
-
-			//query field is array and field is a string
-			if !fieldOk && ok {
-				anyMatch := false
-				asString := f.Interface().(string)
-				for _, s := range vAsArray {
-					if anyMatch {
-						continue
-					}
-					if !anyMatch && asString == s {
-						anyMatch = true
-					}
-				}
-				match = anyMatch
-			}
-
-		}
-		if match {
+		if q.Match(event) {
 			matched = append(matched, &d.evs[idx])
 		}
 	}
@@ -156,6 +90,5 @@ func (d *LocalMemoryStore) Clear() {
 
 func NewLocalMemoryStore() *LocalMemoryStore {
 	d := LocalMemoryStore{}
-	d.ch = make(chan *Event)
 	return &d
 }
