@@ -9,6 +9,9 @@ import (
 	"time"
 )
 
+//Callback for a managed transaction
+type TransactionFunc func(*sql.Tx) error
+
 type PostgresDataSource struct {
 	pg *sql.DB
 	ch chan *eventhub.Event
@@ -72,7 +75,7 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 
 	var e eventhub.Event
 
-	err := wrapTransaction(p.pg, func(tx *sql.Tx) error {
+	err := p.wrapTransaction(func(tx *sql.Tx) error {
 		rows, err := tx.Query(`
         SELECT
             *
@@ -188,6 +191,49 @@ func (d *PostgresDataSource) applyMigrations() {
 
 }
 
+func (d *PostgresDataSource) wrapTransaction(t TransactionFunc) (err error) {
+
+	var tx *sql.Tx
+
+	if tx, err = d.pg.Begin(); err != nil {
+		return
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	return t(tx)
+
+}
+
+func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) {
+
+	events := []*eventhub.Event{}
+
+	query, args := buildQuery(q)
+
+	err := p.wrapTransaction(func(tx *sql.Tx) error {
+		rows, err := tx.Query(query, args...)
+		defer rows.Close()
+		for rows.Next() {
+			var e eventhub.Event
+			err = scanRow(rows, &e)
+			if err != nil {
+				return err
+			}
+			events = append(events, &e)
+		}
+		return err
+	})
+
+	return events, err
+}
 //Creates a new PostgresDataSource
 func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 
