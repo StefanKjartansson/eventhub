@@ -76,6 +76,7 @@ func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
 
 	}
 
+	//todo add sort to query
 	buffer.WriteString(" order by updated desc;")
 
 	return buffer.String(), args
