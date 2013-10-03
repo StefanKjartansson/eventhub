@@ -38,3 +38,27 @@ func TestEncodeDecodeQuery(t *testing.T) {
 		t.Fatalf("Expected %s, got %s", q.Origin, q2.Origin)
 	}
 }
+
+func TestMatchFilter(t *testing.T) {
+
+	q := Query{}
+	q.Entities = []string{"ns/moo"}
+	t.Logf("Query filter: %+v", q)
+
+	filtered := NewEvent(
+		"Should filter",
+		nil,
+		nil,
+		"This event should be filtered",
+		3,
+		"myapp",
+		[]string{"ns/foo", "ns/boo"},
+		nil,
+		nil,
+		nil)
+
+	if q.Match(*filtered) == true {
+		t.Errorf("Query %+v should not pass Event: %+v", q, filtered)
+	}
+
+}

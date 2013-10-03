@@ -4,12 +4,11 @@ import "strings"
 
 type MatchArray [2][]string
 
-func (m MatchArray) Match() bool {
+func (m MatchArray) Match(match bool) bool {
 
 	qArr := m[0]
 	eArr := m[1]
 
-	match := true
 	if len(qArr) > 0 {
 		allMatch := true
 		for _, s := range qArr {
@@ -67,7 +66,7 @@ func (q *Query) Match(e Event) bool {
 	}
 
 	for _, ma := range arrays {
-		match = ma.Match()
+		match = ma.Match(match)
 	}
 
 	return match
