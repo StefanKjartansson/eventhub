@@ -57,24 +57,23 @@ func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
 		writeDelimiter = true
 	}
 
-	if len(q.Entities) > 0 {
-		if writeDelimiter {
-			buffer.WriteString(delimiter)
-		}
-		nextParam, s := writeArray(paramCount, &args, "entities", q.Entities)
-		paramCount = nextParam
-		buffer.WriteString(s)
-		writeDelimiter = true
-	}
+	//Array fields
+	array_fields := make(map[string][]string)
+	array_fields["entities"] = q.Entities
+	array_fields["actors"] = q.Actors
 
-	if len(q.Actors) > 0 {
-		if writeDelimiter {
-			buffer.WriteString(delimiter)
+	for db_name, array_field := range array_fields {
+
+		if len(array_field) > 0 {
+			if writeDelimiter {
+				buffer.WriteString(delimiter)
+			}
+			nextParam, s := writeArray(paramCount, &args, db_name, array_field)
+			paramCount = nextParam
+			buffer.WriteString(s)
+			writeDelimiter = true
 		}
-		nextParam, s := writeArray(paramCount, &args, "actors", q.Actors)
-		paramCount = nextParam
-		buffer.WriteString(s)
-		writeDelimiter = true
+
 	}
 
 	buffer.WriteString(" order by updated desc;")
