@@ -24,7 +24,6 @@ type TransactionFunc func(*sql.Tx) error
 
 type PostgresDataSource struct {
 	pg *sql.DB
-	ch chan *eventhub.Event
 }
 
 // Converts a row to an event
@@ -108,14 +107,6 @@ func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
 	}
 	return &e, nil
 
-}
-
-func (d *PostgresDataSource) Updates() <-chan *eventhub.Event {
-	return d.ch
-}
-
-func (d *PostgresDataSource) Close() error {
-	return nil
 }
 
 func (d *PostgresDataSource) applyMigrations() {
@@ -267,8 +258,6 @@ func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 		})
 	}
 
-	p.ch <- e
-
 	return err
 }
 
@@ -283,7 +272,6 @@ func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 	}
 
 	p.pg = pg
-	p.ch = make(chan *eventhub.Event)
 
 	//Run migrations
 	p.applyMigrations()

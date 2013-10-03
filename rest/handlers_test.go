@@ -32,14 +32,6 @@ func startServer() {
 		panic(err)
 	}
 
-	go func() {
-		for {
-			select {
-			case _ = <-d.Updates():
-			}
-		}
-	}()
-
 	_, err = pdb.Exec(`TRUNCATE TABLE event RESTART IDENTITY;`)
 	if err != nil {
 		panic(err)

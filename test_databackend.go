@@ -123,15 +123,6 @@ func FilterByTest(t *testing.T, d DataBackend) {
 
 func InsertUpdateTest(t *testing.T, d DataBackend) {
 
-	go func() {
-		for {
-			select {
-			case event := <-d.Updates():
-				t.Logf("DataBackend emitted %s", event)
-			}
-		}
-	}()
-
 	data := struct {
 		Foo string `json:"foo"`
 	}{

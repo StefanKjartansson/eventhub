@@ -22,7 +22,6 @@ func (s ByDate) Less(i, j int) bool {
 type LocalMemoryStore struct {
 	evs []Event
 	m   sync.Mutex
-	ch  chan *Event
 }
 
 func (d *LocalMemoryStore) GetById(id int) (*Event, error) {
@@ -63,16 +62,6 @@ func (d *LocalMemoryStore) Save(e *Event) error {
 		d.evs = append(d.evs, *e)
 	}
 
-	d.ch <- e
-
-	return nil
-}
-
-func (d *LocalMemoryStore) Updates() <-chan *Event {
-	return d.ch
-}
-
-func (d *LocalMemoryStore) Close() error {
 	return nil
 }
 
@@ -147,6 +136,5 @@ func (d *LocalMemoryStore) Clear() {
 
 func NewLocalMemoryStore() *LocalMemoryStore {
 	d := LocalMemoryStore{}
-	d.ch = make(chan *Event)
 	return &d
 }
