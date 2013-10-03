@@ -234,6 +234,7 @@ func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) 
 
 	return events, err
 }
+
 //Creates a new PostgresDataSource
 func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 
