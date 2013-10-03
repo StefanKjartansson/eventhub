@@ -235,6 +235,32 @@ func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) 
 	return events, err
 }
 
+func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
+
+	switch e.ID {
+	case 0:
+		err = p.wrapTransaction(func(tx *sql.Tx) error {
+			query, args, err := buildInsertQuery(e)
+			if err != nil {
+				return err
+			}
+			return tx.QueryRow(query, args...).Scan(&e.ID, &e.Created, &e.Updated)
+		})
+	default:
+		err = p.wrapTransaction(func(tx *sql.Tx) error {
+			query, args, err := buildUpdateQuery(e)
+			if err != nil {
+				return err
+			}
+			return tx.QueryRow(query, args...).Scan(&e.Updated)
+		})
+	}
+
+	p.ch <- e
+
+	return err
+}
+
 //Creates a new PostgresDataSource
 func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 
