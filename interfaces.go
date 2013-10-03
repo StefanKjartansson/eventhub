@@ -13,7 +13,8 @@ type DataBackend interface {
 }
 
 type Broadcaster interface {
-	Broadcast(e *Event) error
+	Broadcast(e *Event)
+	//Get Error chan
 }
 
 type DataService interface {
