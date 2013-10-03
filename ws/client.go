@@ -9,20 +9,6 @@ import (
 
 var maxId int = 0
 
-//to filter the feed
-type FilterMessage struct {
-	Entity string `json:"entity"`
-}
-
-func (fm *FilterMessage) Passes(event *eventhub.Event) bool {
-	for _, e := range event.Entities {
-		if fm.Entity == e {
-			return true
-		}
-	}
-	return false
-}
-
 //Represents a connected websocket client
 type Client struct {
 	id     int
@@ -30,7 +16,7 @@ type Client struct {
 	server *Server
 	ch     chan *eventhub.Event
 	doneCh chan bool
-	filter FilterMessage
+	query  eventhub.Query
 }
 
 func NewClient(ws *websocket.Conn, server *Server) *Client {
@@ -42,9 +28,9 @@ func NewClient(ws *websocket.Conn, server *Server) *Client {
 	maxId++
 	ch := make(chan *eventhub.Event)
 	doneCh := make(chan bool)
-	filter := FilterMessage{}
+	query := eventhub.Query{}
 
-	return &Client{maxId, ws, server, ch, doneCh, filter}
+	return &Client{maxId, ws, server, ch, doneCh, query}
 }
 
 func (c *Client) Conn() *websocket.Conn {
@@ -101,14 +87,14 @@ func (c *Client) listenRead() {
 
 		// read data from websocket connection
 		default:
-			var fm FilterMessage
-			err := websocket.JSON.Receive(c.ws, &fm)
+			var q eventhub.Query
+			err := websocket.JSON.Receive(c.ws, &q)
 			if err == io.EOF {
 				c.doneCh <- true
 			} else if err != nil {
 				c.server.Err(err)
 			} else {
-				c.filter = fm
+				c.query = q
 			}
 		}
 	}

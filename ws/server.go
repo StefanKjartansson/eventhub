@@ -54,7 +54,8 @@ func (s *Server) Err(err error) {
 
 func (s *Server) sendAll(event *eventhub.Event) {
 	for _, c := range s.clients {
-		if c.filter.Entity == "" || c.filter.Passes(event) {
+		log.Printf("%+v", c.query)
+		if c.query.Match(*event) {
 			c.Write(event)
 		}
 	}
