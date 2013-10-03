@@ -3,7 +3,6 @@ package eventhub
 import (
 	"errors"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 )
@@ -65,15 +64,6 @@ func (d *LocalMemoryStore) Save(e *Event) error {
 	return nil
 }
 
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
-
 func (d *LocalMemoryStore) Query(q Query) ([]*Event, error) {
 
 	d.m.Lock()
@@ -82,43 +72,7 @@ func (d *LocalMemoryStore) Query(q Query) ([]*Event, error) {
 	var matched []*Event
 
 	for idx, event := range d.evs {
-
-		match := false
-		if q.Origin != "" && event.Origin == q.Origin {
-			match = true
-		}
-
-		if q.Key != "" {
-			match = false
-			for _, s := range strings.Split(q.Key, "OR") {
-				s = strings.TrimSpace(s)
-				if event.Key == s {
-					match = true
-				}
-			}
-		}
-
-		if len(q.Entities) > 0 {
-			allMatch := true
-			for _, s := range q.Entities {
-				if !stringInSlice(s, event.Entities) {
-					allMatch = false
-				}
-			}
-			match = allMatch
-		}
-
-		if len(q.Actors) > 0 {
-			allMatch := true
-			for _, s := range q.Actors {
-				if !stringInSlice(s, event.Actors) {
-					allMatch = false
-				}
-			}
-			match = allMatch
-		}
-
-		if match {
+		if q.Match(event) {
 			matched = append(matched, &d.evs[idx])
 		}
 	}
