@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
+	"log"
+	"time"
 )
 
 type PostgresDataSource struct {
@@ -103,6 +105,89 @@ func (d *PostgresDataSource) Close() error {
 	return nil
 }
 
+func (d *PostgresDataSource) applyMigrations() {
+
+	// Get all table names
+	// TODO: maybe change the schema name?
+
+	rows, err := d.pg.Query(`
+        select tablename
+            from pg_tables
+        where
+            pg_tables.schemaname = 'public';
+    `)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	canMigrate := false
+	var s string
+	for rows.Next() {
+		rows.Scan(&s)
+		if s == "migration_info" {
+			canMigrate = true
+		}
+	}
+
+	//No table names returned
+	if s == "" {
+		canMigrate = true
+	}
+
+	//Get the list of migrations
+	m, err := globMigrations()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//If there were tables, the migration_info
+	//table should be among them
+	if s != "" {
+		rows, err := d.pg.Query(`
+            select created from
+                migration_info
+            order by created
+        `)
+
+		removalDates := []time.Time{}
+		for rows.Next() {
+			var t time.Time
+			err = rows.Scan(&t)
+			if err != nil {
+				log.Fatal(err)
+			}
+			//Weird, table created with TZ, but Scan doesn't
+			//add the UTC info
+			removalDates = append(removalDates, t.UTC())
+		}
+
+		//Filter out migrations which have already been applied
+		m = m.FilterDates(removalDates)
+	}
+
+	//Run migrations
+	if canMigrate && len(m) > 0 {
+
+		for _, migration := range m {
+
+			_, err := d.pg.Exec(migration.content)
+			if err != nil {
+				log.Fatal(err)
+			}
+			_, err = d.pg.Exec(`
+                insert into migration_info
+                    (created, content)
+                values($1, $2)`, migration.date, migration.content)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+}
+
 //Creates a new PostgresDataSource
 func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 
@@ -116,7 +201,8 @@ func NewPostgresDataSource(connection string) (*PostgresDataSource, error) {
 	p.pg = pg
 	p.ch = make(chan *eventhub.Event)
 
-	//Runs migrations
-	bootstrapDatabase(p.pg)
+	//Run migrations
+	p.applyMigrations()
+
 	return &p, nil
 }
