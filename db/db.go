@@ -9,7 +9,17 @@ import (
 	"time"
 )
 
-//Callback for a managed transaction
+// Callback for a managed transaction
+//
+// Example:
+//
+//	err := p.wrapTransaction(func(tx *sql.Tx) error {
+//	    rows, err := tx.Query(query, args...)
+//      if err != nil {
+//         return err
+//      }
+// }
+//
 type TransactionFunc func(*sql.Tx) error
 
 type PostgresDataSource struct {
@@ -17,7 +27,7 @@ type PostgresDataSource struct {
 	ch chan *eventhub.Event
 }
 
-//Converts a row to an event
+// Converts a row to an event
 func scanRow(row *sql.Rows, e *eventhub.Event) error {
 
 	var entities StringSlice
@@ -235,6 +245,7 @@ func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) 
 	return events, err
 }
 
+// Saves or updates an event
 func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
 
 	switch e.ID {
