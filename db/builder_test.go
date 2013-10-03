@@ -28,7 +28,7 @@ func TestQueryBuilder(t *testing.T) {
 	q.Entities = []string{"c/1", "c/2"}
 	q.Key = "foo.bar OR bar.foo"
 
-	s, args := buildQuery(q)
+	s, args := buildSelectQuery(q)
 
 	if s != expected {
 		t.Fatalf("Expected %s, got %s", expected, s)

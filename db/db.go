@@ -216,7 +216,7 @@ func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) 
 
 	events := []*eventhub.Event{}
 
-	query, args := buildQuery(q)
+	query, args := buildSelectQuery(q)
 
 	err := p.wrapTransaction(func(tx *sql.Tx) error {
 		rows, err := tx.Query(query, args...)

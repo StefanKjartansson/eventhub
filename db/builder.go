@@ -22,7 +22,7 @@ func writeArray(paramCount int, args *[]interface{}, key string, arr []string) (
 	return paramCount, buffer.String()
 }
 
-func buildQuery(q eventhub.Query) (string, []interface{}) {
+func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
 
 	var buffer bytes.Buffer
 	args := []interface{}{}
