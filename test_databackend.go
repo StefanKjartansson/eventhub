@@ -115,7 +115,7 @@ func QueryTest(t *testing.T, d DataBackend) {
 	}
 }
 
-func FilterByTest(t *testing.T, d DataBackend) {
+func QueryByTest(t *testing.T, d DataBackend) {
 
 	bootstrapData(d)
 
