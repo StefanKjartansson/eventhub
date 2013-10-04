@@ -14,10 +14,8 @@ type DataBackend interface {
 
 type Broadcaster interface {
 	Broadcast(e *Event)
-	//Get Error chan
 }
 
 type DataService interface {
-	SetBackend(d *DataBackend) error
-	Run() error
+	Run(d *DataBackend, ec chan error)
 }
