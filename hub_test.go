@@ -1,6 +1,7 @@
 package eventhub
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -26,6 +27,17 @@ func (f FakeBroadCaster) Broadcast(e *Event) {
 	f.events <- e
 }
 
+type FakeDataService struct {
+	d *DataBackend
+}
+
+func (f FakeDataService) Run(d *DataBackend, ec chan error) {
+	f.d = d
+	if f.d == nil {
+		ec <- fmt.Errorf("FakeDataService started with nil DataBackend")
+	}
+}
+
 func TestHub(t *testing.T) {
 
 	d := NewLocalMemoryStore()
@@ -38,6 +50,9 @@ func TestHub(t *testing.T) {
 
 	b := FakeBroadCaster{make(chan *Event)}
 	h.AddBroadcasters(b)
+
+	fds := FakeDataService{}
+	h.AddDataServices(fds)
 
 	count := 5
 	ticker := time.NewTicker(1 * time.Millisecond)
@@ -82,4 +97,5 @@ func TestHub(t *testing.T) {
 	for i := 0; i < 12; i++ {
 		t.Logf("Broadcast: %+v", <-b.events)
 	}
+
 }
