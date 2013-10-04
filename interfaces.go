@@ -17,5 +17,5 @@ type Broadcaster interface {
 }
 
 type DataService interface {
-	Run(d *DataBackend, ec chan error)
+	Run(d DataBackend, ec chan error)
 }

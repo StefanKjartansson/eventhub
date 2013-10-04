@@ -43,7 +43,7 @@ func (h *hub) AddBroadcasters(bcs ...Broadcaster) {
 
 func (h *hub) AddDataServices(ds ...DataService) {
 	for _, d := range ds {
-		go d.Run(&h.db, h.errs)
+		go d.Run(h.db, h.errs)
 	}
 }
 

@@ -28,10 +28,10 @@ func (f FakeBroadCaster) Broadcast(e *Event) {
 }
 
 type FakeDataService struct {
-	d *DataBackend
+	d DataBackend
 }
 
-func (f FakeDataService) Run(d *DataBackend, ec chan error) {
+func (f FakeDataService) Run(d DataBackend, ec chan error) {
 	f.d = d
 	if f.d == nil {
 		ec <- fmt.Errorf("FakeDataService started with nil DataBackend")
