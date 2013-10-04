@@ -71,6 +71,15 @@ func startServer() {
 		}
 	}()
 
+	go func() {
+		for {
+			select {
+			case event := <-rest.Updates():
+				d.Save(event)
+			}
+		}
+	}()
+
 	log.Print("Test Server running on ", serverAddr)
 	client = http.DefaultClient
 	log.Print("Test Client created")

@@ -1,7 +1,6 @@
 package rest
 
 //TODO: Better use of errchan
-//TODO: Dont save directly to database, be a feed
 
 import (
 	"encoding/json"
@@ -72,7 +71,10 @@ func (r *RESTService) parseEvent(body io.ReadCloser) (eventhub.Event, error) {
 	return e, err
 }
 
-func (r *RESTService) postHandler(w http.ResponseWriter, req *http.Request) {
+func (r *RESTService) saveHandler(w http.ResponseWriter, req *http.Request) {
+
+	vars := mux.Vars(req)
+	id := vars["id"]
 
 	e, err := r.parseEvent(req.Body)
 	if err != nil {
@@ -80,34 +82,24 @@ func (r *RESTService) postHandler(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	err = r.databackend.Save(&e)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error", http.StatusInternalServerError)
+	if id == "" && e.ID != 0 {
+		http.Error(w, "Can't POST existing resource", http.StatusBadRequest)
 		return
 	}
-	w.WriteHeader(http.StatusCreated)
-}
 
-func (r *RESTService) updateHandler(w http.ResponseWriter, req *http.Request) {
+	if id != "" && e.ID == 0 {
+		http.Error(w, "No ID for update", http.StatusBadRequest)
+		return
+	}
 
-	e, err := r.parseEvent(req.Body)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	switch e.ID {
+	case 0:
+		w.WriteHeader(http.StatusCreated)
+	default:
+		w.WriteHeader(http.StatusAccepted)
 	}
-	if e.ID == 0 {
-		http.Error(w, "No ID", http.StatusBadRequest)
-		return
-	}
-	err = r.databackend.Save(&e)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error", http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusAccepted)
+
+	r.events <- &e
 }
 
 func (r *RESTService) search(q eventhub.Query, entity string) ([]*eventhub.Event, error) {
@@ -172,9 +164,9 @@ func (r *RESTService) getRouter() (*mux.Router, error) {
 	router := mux.NewRouter()
 	router.HandleFunc(r.prefix+"/{entity}/{id}/", r.entityHandler).Methods("GET")
 	router.HandleFunc(r.prefix+"/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
-	router.HandleFunc(r.prefix+"/", r.postHandler).Methods("POST")
+	router.HandleFunc(r.prefix+"/", r.saveHandler).Methods("POST")
 	router.HandleFunc(r.prefix+"/{id}/", r.retrieveHandler).Methods("GET")
-	router.HandleFunc(r.prefix+"/{id}/", r.updateHandler).Methods("PUT")
+	router.HandleFunc(r.prefix+"/{id}/", r.saveHandler).Methods("PUT")
 	router.HandleFunc(r.prefix+"/search", r.searchHandler).Methods("GET")
 	return router, nil
 }
@@ -213,6 +205,6 @@ func (r *RESTService) Updates() <-chan *eventhub.Event {
 
 func (r *RESTService) Close() error {
 	close(r.events)
-	//Investigate way to perform graceful shutdown
+	//Investigate way to perform graceful shutdown of http
 	return nil
 }
