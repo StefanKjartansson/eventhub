@@ -1,5 +1,8 @@
 package rest
 
+//TODO: Better use of errchan
+//TODO: Dont save directly to database, be a feed
+
 import (
 	"encoding/json"
 	"github.com/StefanKjartansson/eventhub"
@@ -10,11 +13,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
 type RESTService struct {
 	databackend eventhub.DataBackend
+	address     string
+	prefix      string
+	events      chan *eventhub.Event
 }
 
 func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) {
@@ -105,13 +110,6 @@ func (r *RESTService) updateHandler(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func UpcaseInitial(str string) string {
-	for i, v := range str {
-		return string(unicode.ToUpper(v)) + str[i+1:]
-	}
-	return ""
-}
-
 func (r *RESTService) search(q eventhub.Query, entity string) ([]*eventhub.Event, error) {
 	if entity != "" {
 		q.Entities = append(q.Entities, entity)
@@ -169,19 +167,52 @@ func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Reque
 	enc.Encode(events)
 }
 
-func (r *RESTService) GetRouter(prefix string) (*mux.Router, error) {
+func (r *RESTService) getRouter() (*mux.Router, error) {
 
 	router := mux.NewRouter()
-	router.HandleFunc(prefix+"/{entity}/{id}/", r.entityHandler).Methods("GET")
-	router.HandleFunc(prefix+"/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
-	router.HandleFunc(prefix+"/", r.postHandler).Methods("POST")
-	router.HandleFunc(prefix+"/{id}/", r.retrieveHandler).Methods("GET")
-	router.HandleFunc(prefix+"/{id}/", r.updateHandler).Methods("PUT")
-	router.HandleFunc(prefix+"/search", r.searchHandler).Methods("GET")
+	router.HandleFunc(r.prefix+"/{entity}/{id}/", r.entityHandler).Methods("GET")
+	router.HandleFunc(r.prefix+"/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
+	router.HandleFunc(r.prefix+"/", r.postHandler).Methods("POST")
+	router.HandleFunc(r.prefix+"/{id}/", r.retrieveHandler).Methods("GET")
+	router.HandleFunc(r.prefix+"/{id}/", r.updateHandler).Methods("PUT")
+	router.HandleFunc(r.prefix+"/search", r.searchHandler).Methods("GET")
 	return router, nil
 }
 
-func NewRESTService(d eventhub.DataBackend) *RESTService {
+func NewRESTService(prefix string, address string) *RESTService {
+	return &RESTService{
+		prefix:  prefix,
+		address: address,
+		events:  make(chan *eventhub.Event),
+	}
+}
 
-	return &RESTService{d}
+//DataService interface
+func (r *RESTService) Run(d eventhub.DataBackend, ec chan error) {
+
+	r.databackend = d
+
+	router, err := r.getRouter()
+	if err != nil {
+		ec <- err
+	}
+
+	http.Handle("/", router)
+
+	err = http.ListenAndServe(r.address, nil)
+	if err != nil {
+		ec <- err
+	}
+
+}
+
+//EventFeed interface
+func (r *RESTService) Updates() <-chan *eventhub.Event {
+	return r.events
+}
+
+func (r *RESTService) Close() error {
+	close(r.events)
+	//Investigate way to perform graceful shutdown
+	return nil
 }
