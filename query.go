@@ -4,10 +4,15 @@ import "strings"
 
 type MatchArray [2][]string
 
-func (m MatchArray) Match(match bool) bool {
+func (m MatchArray) Match() bool {
 
 	qArr := m[0]
 	eArr := m[1]
+
+	//both are empty, ignore
+	if len(qArr) == 0 && len(eArr) == 0 {
+		return true
+	}
 
 	if len(qArr) > 0 {
 		allMatch := true
@@ -16,9 +21,12 @@ func (m MatchArray) Match(match bool) bool {
 				allMatch = false
 			}
 		}
-		match = allMatch
+		if !allMatch {
+			return false
+		}
 	}
-	return match
+	return true
+
 }
 
 func stringInSlice(a string, list []string) bool {
@@ -45,21 +53,21 @@ func (q *Query) Match(e Event) bool {
 		return true
 	}
 
-	match := false
-	if q.Origin != "" && e.Origin == q.Origin {
-		match = true
+	if q.Origin != "" && e.Origin != q.Origin {
+		return false
 	}
 
+	//the key or any of the keys match
 	if q.Key != "" {
-		match = false
+		anyMatch := false
 		for _, s := range strings.Split(q.Key, "OR") {
 			s = strings.TrimSpace(s)
 			if e.Key == s {
-				match = true
+				anyMatch = true
 			}
 		}
-		if match != true {
-			return match
+		if !anyMatch {
+			return false
 		}
 	}
 
@@ -69,8 +77,9 @@ func (q *Query) Match(e Event) bool {
 	}
 
 	for _, ma := range arrays {
-		match = ma.Match(match)
+		if !ma.Match() {
+			return false
+		}
 	}
-
-	return match
+	return true
 }

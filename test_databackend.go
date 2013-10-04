@@ -151,6 +151,8 @@ func FilterByTest(t *testing.T, d DataBackend) {
 
 		evs, err = d.Query(q)
 
+		t.Logf("evs: %+v", evs)
+
 		if err != nil {
 			t.Fatal(err)
 		}
