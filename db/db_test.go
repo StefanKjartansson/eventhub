@@ -17,30 +17,35 @@ func TestDB(t *testing.T) {
 		return
 	}
 
+	//truncate table
+	clear := func() {
+		_, err := db.Exec(`TRUNCATE TABLE event RESTART IDENTITY;`)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	_, err = db.Exec(`drop table if exists migration_info, event;`)
 	if err != nil {
-		t.Error("Error:", err)
-		return
+		t.Fatal("Error:", err)
 	}
 
 	// With migrations applied
 	_, err = NewPostgresDataSource(connection)
 	if err != nil {
-		t.Error("PostgresDataSource has error:", err)
-		return
+		t.Fatal("PostgresDataSource has error:", err)
 	}
 
 	// With no migrations applied
 	p, err := NewPostgresDataSource(connection)
 	if err != nil {
-		t.Error("PostgresDataSource has error:", err)
-		return
+		t.Fatal("PostgresDataSource has error:", err)
 	}
 
 	eventhub.InsertUpdateTest(t, p)
+	clear()
+	eventhub.QueryByTest(t, p)
+	clear()
+	eventhub.QueryTest(t, p)
 
-	//Clear the table
-	_, err = db.Exec(`truncate table event;`)
-
-	eventhub.FilterByTest(t, p)
 }
