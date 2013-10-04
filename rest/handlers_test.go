@@ -2,15 +2,12 @@ package rest
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
-	"github.com/StefanKjartansson/eventhub/db"
 	"github.com/google/go-querystring/query"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"sync"
 	"testing"
 )
@@ -20,22 +17,12 @@ var once sync.Once
 var client *http.Client
 var firstEvent *eventhub.Event
 var secondEvent *eventhub.Event
+var errChan chan error
 
 func startServer() {
 
-	const connection = "dbname=teststream host=localhost sslmode=disable"
-	d, err := db.NewPostgresDataSource(connection)
-
-	//d := eventhub.NewDummyBackend()
-	pdb, err := sql.Open("postgres", connection)
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = pdb.Exec(`TRUNCATE TABLE event RESTART IDENTITY;`)
-	if err != nil {
-		panic(err)
-	}
+	errChan = make(chan error)
+	d := eventhub.NewLocalMemoryStore()
 
 	firstEvent = eventhub.NewEvent(
 		"myapp.user.login",
@@ -61,7 +48,7 @@ func startServer() {
 		nil,
 		nil)
 
-	err = d.Save(firstEvent)
+	err := d.Save(firstEvent)
 	if err != nil {
 		panic(err)
 	}
@@ -71,16 +58,19 @@ func startServer() {
 		panic(err)
 	}
 
-	rest := NewRESTService(d)
-	router, err := rest.GetRouter("")
+	serverAddr = "localhost:14234"
+	rest := NewRESTService("", ":14234")
+	go rest.Run(d, errChan)
 
-	if err != nil {
-		panic(err)
-	}
+	go func() {
+		for {
+			select {
+			case err := <-errChan:
+				log.Fatalf("errChan: %+v", err)
+			}
+		}
+	}()
 
-	http.Handle("/", router)
-	server := httptest.NewServer(nil)
-	serverAddr = server.Listener.Addr().String()
 	log.Print("Test Server running on ", serverAddr)
 	client = http.DefaultClient
 	log.Print("Test Client created")
@@ -223,6 +213,7 @@ func TestSearch(t *testing.T) {
 			t.Fatal(err)
 		}
 		url := fmt.Sprintf("http://%s/search?%s", serverAddr, v.Encode())
+		log.Println(url)
 		results := []eventhub.Event{}
 		getJSON(t, url, &results)
 	}
