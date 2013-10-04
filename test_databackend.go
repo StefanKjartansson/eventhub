@@ -46,6 +46,75 @@ func bootstrapData(d DataBackend) {
 
 }
 
+func QueryTest(t *testing.T, d DataBackend) {
+
+	d.Save(NewEvent(
+		"a",
+		nil,
+		nil,
+		"",
+		3,
+		"mysystem",
+		[]string{"ns/foo"},
+		nil,
+		[]string{"actor1"},
+		nil))
+
+	d.Save(NewEvent(
+		"b",
+		nil,
+		nil,
+		"",
+		3,
+		"mysystem",
+		[]string{"ns/foo"},
+		nil,
+		[]string{"actor2"},
+		nil))
+
+	q := Query{}
+	q.Key = "a"
+	q.Actors = []string{"actor2"}
+
+	evs, err := d.Query(q)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(evs) != 0 {
+
+		for _, e := range evs {
+			t.Logf("Key: %s, expected %s", e.Key, q.Key)
+			t.Logf("Actors: %+v, expected %+v", e.Actors, q.Actors)
+		}
+
+		t.Fatalf("Expected 0, got %d. query: %+v, events: %+v",
+			len(evs), q)
+	}
+
+	q = Query{}
+	q.Entities = []string{"ns/foo"}
+	q.Actors = []string{"actor2"}
+
+	evs, err = d.Query(q)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(evs) != 1 {
+
+		for _, e := range evs {
+			t.Logf("Key: %s, expected %s", e.Key, q.Key)
+			t.Logf("Actors: %+v, expected %+v", e.Actors, q.Actors)
+		}
+
+		t.Fatalf("Expected 1, got %d. query: %+v, events: %+v",
+			len(evs), q)
+	}
+}
+
 func FilterByTest(t *testing.T, d DataBackend) {
 
 	bootstrapData(d)

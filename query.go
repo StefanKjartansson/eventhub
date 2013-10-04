@@ -58,6 +58,9 @@ func (q *Query) Match(e Event) bool {
 				match = true
 			}
 		}
+		if match != true {
+			return match
+		}
 	}
 
 	arrays := []MatchArray{

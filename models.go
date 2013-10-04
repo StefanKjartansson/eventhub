@@ -1,7 +1,6 @@
 package eventhub
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -36,8 +35,4 @@ func NewEvent(key string, keyParams interface{}, payload interface{}, descriptio
 		Actors:          actors,
 		Tags:            tags,
 	}
-}
-
-func (e Event) String() string {
-	return fmt.Sprintf("%s, %v, %s, %v, %v", e.Key, e.Created, e.Origin, e.Entities, e.Actors)
 }
