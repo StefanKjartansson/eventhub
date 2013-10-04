@@ -1,6 +1,7 @@
 package eventhub
 
 import (
+	"log"
 	"sync"
 )
 
@@ -11,12 +12,16 @@ type hub struct {
 	db           DataBackend
 	broadcasters []Broadcaster
 	dataservices []DataService
+	errs         chan error
+	quit         chan struct{}
 }
 
 func NewHub(application string, d DataBackend) *hub {
 	return &hub{
 		application: application,
 		db:          d,
+		errs:        make(chan error),
+		quit:        make(chan struct{}),
 	}
 }
 
@@ -36,11 +41,10 @@ func (h *hub) AddBroadcasters(bcs ...Broadcaster) {
 	}
 }
 
-func (h *hub) AddDataService(d DataService) {
-	h.m.Lock()
-	defer h.m.Unlock()
-	d.SetBackend(&h.db)
-	h.dataservices = append(h.dataservices, d)
+func (h *hub) AddDataServices(ds ...DataService) {
+	for _, d := range ds {
+		go d.Run(&h.db, h.errs)
+	}
 }
 
 func (h *hub) Run() {
@@ -53,12 +57,23 @@ func (h *hub) Run() {
 		case e = <-merged.Updates():
 			err := h.db.Save(e)
 			if err != nil {
-				err = merged.Close()
+				h.errs <- err
 			}
 			for _, b := range h.broadcasters {
-				b.Broadcast(e)
+				go b.Broadcast(e)
 			}
+		case err := <-h.errs:
+			log.Fatal(err)
+			return
+		case <-h.quit:
+			h.errs <- merged.Close()
+			return
 		}
 	}
 
+}
+
+func (h *hub) Close() error {
+	close(h.quit)
+	return <-h.errs
 }
