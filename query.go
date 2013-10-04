@@ -38,35 +38,55 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
+func orMatchStringAny(q, e string) bool {
+
+	for _, s := range strings.Split(q, "OR") {
+		s = strings.TrimSpace(s)
+		if e == s {
+			return true
+		}
+	}
+	return false
+}
+
+//TODO: plugin other_references & tags
+//TODO: Created/Updated, lt & gt
+//TODO: Importance, 1+OR+3 gt1 lt4. single param
+//TODO: Sort & direction
 type Query struct {
-	Origin   string   `url:"origin,omitempty" schema:"origin" json:"origin"`
-	Key      string   `url:"key,omitempty" schema:"key" json:"key"`
-	Entities []string `url:"entities,omitempty" schema:"entities" json:"entities"`
-	Actors   []string `url:"actors,omitempty" schema:"actors" json:"actors"`
+	Origin          string   `url:"origin,omitempty" schema:"origin" json:"origin"`
+	Key             string   `url:"key,omitempty" schema:"key" json:"key"`
+	Entities        []string `url:"entities,omitempty" schema:"entities" json:"entities"`
+	OtherReferences []string `url:"other_references,omitempty" schema:"other_references" json:"other_references"`
+	Actors          []string `url:"actors,omitempty" schema:"actors" json:"actors"`
+	Tags            []string `url:"tags,omitempty" schema:"tags" json:"tags"`
+	Importance      string   `url:"importance,omitempty" schema:"importance" json:"importance"`
+	Updated         string   `url:"updated,omitempty" schema:"updated" json:"updated"`
+	Created         string   `url:"created,omitempty" schema:"created" json:"created"`
+}
+
+func (q *Query) IsEmpty() bool {
+
+	if q.Origin == "" && q.Key == "" && len(q.Entities) == 0 && len(q.Actors) == 0 {
+		return true
+	}
+	return false
 }
 
 // Determines whether an event matched the query
 func (q *Query) Match(e Event) bool {
 
-	//Catch non-initialized query fast
-	if q.Origin == "" && q.Key == "" && len(q.Entities) == 0 && len(q.Actors) == 0 {
+	if q.IsEmpty() {
 		return true
 	}
 
-	if q.Origin != "" && e.Origin != q.Origin {
-		return false
+	orPairs := [][2]string{
+		[2]string{q.Origin, e.Origin},
+		[2]string{q.Key, e.Key},
 	}
 
-	//the key or any of the keys match
-	if q.Key != "" {
-		anyMatch := false
-		for _, s := range strings.Split(q.Key, "OR") {
-			s = strings.TrimSpace(s)
-			if e.Key == s {
-				anyMatch = true
-			}
-		}
-		if !anyMatch {
+	for _, pair := range orPairs {
+		if pair[0] != "" && !orMatchStringAny(pair[0], pair[1]) {
 			return false
 		}
 	}
