@@ -162,12 +162,13 @@ func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Reque
 func (r *RESTService) getRouter() (*mux.Router, error) {
 
 	router := mux.NewRouter()
-	router.HandleFunc(r.prefix+"/{entity}/{id}/", r.entityHandler).Methods("GET")
-	router.HandleFunc(r.prefix+"/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
-	router.HandleFunc(r.prefix+"/", r.saveHandler).Methods("POST")
-	router.HandleFunc(r.prefix+"/{id}/", r.retrieveHandler).Methods("GET")
-	router.HandleFunc(r.prefix+"/{id}/", r.saveHandler).Methods("PUT")
-	router.HandleFunc(r.prefix+"/search", r.searchHandler).Methods("GET")
+	s := router.PathPrefix(r.prefix).Subrouter()
+	s.HandleFunc("/{entity}/{id}/", r.entityHandler).Methods("GET")
+	s.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
+	s.HandleFunc("/", r.saveHandler).Methods("POST")
+	s.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
+	s.HandleFunc("/{id}/", r.saveHandler).Methods("PUT")
+	s.HandleFunc("/search", r.searchHandler).Methods("GET")
 	return router, nil
 }
 
@@ -189,7 +190,7 @@ func (r *RESTService) Run(d eventhub.DataBackend, ec chan error) {
 		ec <- err
 	}
 
-	http.Handle("/", router)
+	http.Handle(r.prefix+"/", router)
 
 	err = http.ListenAndServe(r.address, nil)
 	if err != nil {

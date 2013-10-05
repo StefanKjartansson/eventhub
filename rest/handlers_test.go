@@ -58,8 +58,8 @@ func startServer() {
 		panic(err)
 	}
 
-	serverAddr = "localhost:14234"
-	rest := NewRESTService("", ":14234")
+	serverAddr = "localhost:14234/api"
+	rest := NewRESTService("/api", ":14234")
 	go rest.Run(d, errChan)
 
 	go func() {
