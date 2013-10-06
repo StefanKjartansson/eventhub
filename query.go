@@ -62,7 +62,6 @@ func orMatchStringAny(q, e string) bool {
 	return false
 }
 
-//TODO: plugin other_references & tags
 //TODO: Created/Updated, lt & gt
 //TODO: Importance, 1+OR+3 gt1 lt4. single param
 //TODO: Sort & direction
@@ -79,10 +78,45 @@ type Query struct {
 // Returns true if the query values are empty
 func (q *Query) IsEmpty() bool {
 
-	if q.Origin == "" && q.Key == "" && len(q.Entities) == 0 && len(q.Actors) == 0 {
+	for _, s := range []string{q.Origin, q.Key, q.Importance} {
+		if s != "" {
+			return false
+		}
+	}
+	for _, arr := range [][]string{q.Entities, q.OtherReferences, q.Actors, q.Tags} {
+		if len(arr) > 0 {
+			return false
+		}
+	}
+	return true
+
+}
+
+func (q *Query) matchImportance(i int) bool {
+
+	if q.Importance == "" {
 		return true
 	}
-	return false
+
+	val, err := strconv.Atoi(strings.TrimFunc(q.Importance, unicode.IsLetter))
+	if err != nil {
+		//maybe don't fatal
+		log.Fatal(err)
+		return false
+	}
+
+	switch strings.TrimFunc(q.Importance, unicode.IsDigit) {
+	case "gte":
+		return (i >= val)
+	case "gt":
+		return (i > val)
+	case "lte":
+		return (i <= val)
+	case "lt":
+		return (i < val)
+	}
+	return (val == i)
+
 }
 
 // Determines whether an event matched the query
@@ -109,7 +143,9 @@ func (q *Query) Match(e Event) bool {
 
 	arrays := []MatchArray{
 		{q.Entities, e.Entities},
+		{q.OtherReferences, e.OtherReferences},
 		{q.Actors, e.Actors},
+		{q.Tags, e.Tags},
 	}
 
 	for _, ma := range arrays {
@@ -118,26 +154,5 @@ func (q *Query) Match(e Event) bool {
 		}
 	}
 
-	if q.Importance != "" {
-		val, err := strconv.Atoi(strings.TrimFunc(q.Importance, unicode.IsLetter))
-		if err != nil {
-			//maybe don't fatal
-			log.Fatal(err)
-			return false
-		}
-
-		switch strings.TrimFunc(q.Importance, unicode.IsDigit) {
-		case "gte":
-			return (e.Importance >= val)
-		case "gt":
-			return (e.Importance > val)
-		case "lte":
-			return (e.Importance <= val)
-		case "lt":
-			return (e.Importance < val)
-		}
-		return (val == e.Importance)
-	}
-
-	return true
+	return q.matchImportance(e.Importance)
 }
