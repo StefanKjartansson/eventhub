@@ -294,4 +294,10 @@ func AggregateTypeTest(t *testing.T, d DataBackend) {
 		}
 	}
 
+	q := Query{}
+	_, err := d.AggregateType(q, "doesnotexist")
+
+	if err == nil {
+		t.Fatal("Should have been raised")
+	}
 }

@@ -84,6 +84,10 @@ func (d *LocalMemoryStore) Query(q Query) ([]*Event, error) {
 
 func (d *LocalMemoryStore) AggregateType(q Query, s string) (map[string]int, error) {
 
+	if !stringInSlice(s, []string{"entities", "other_references", "actors", "tags"}) {
+		return nil, errors.New("Invalid type")
+	}
+
 	m := make(map[string]int)
 
 	evs, err := d.Query(q)
