@@ -8,9 +8,9 @@ import (
 
 func TestEncodeDecodeQuery(t *testing.T) {
 
-	expected := "entities=c%2F1&entities=c%2F2&origin=mysystem"
-	q := Query{}
+	const expected = "entities=c%2F1&entities=c%2F2&origin=mysystem"
 
+	q := Query{}
 	q.Origin = "mysystem"
 	q.Entities = []string{"c/1", "c/2"}
 

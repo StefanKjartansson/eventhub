@@ -4,6 +4,8 @@ import "strings"
 
 type MatchArray [2][]string
 
+// Given two string arrays, returns true if the
+// value array contains all of the query array's values
 func (m MatchArray) Match() bool {
 
 	qArr := m[0]
@@ -29,6 +31,7 @@ func (m MatchArray) Match() bool {
 
 }
 
+// Returns true if a string is in the slice
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {
@@ -38,6 +41,11 @@ func stringInSlice(a string, list []string) bool {
 	return false
 }
 
+// Returns true if any of the OR delimited q string matches e:
+//     orMatchStringAny("foo OR bar or baz", "baz")  // returns true
+//     orMatchStringAny("foo", "foo")  // returns true
+//     orMatchStringAny("  foo  ", "foo")  // returns true
+//     orMatchStringAny("foo OR bar or baz", "moo")  // returns false
 func orMatchStringAny(q, e string) bool {
 
 	for _, s := range strings.Split(q, "OR") {
@@ -61,10 +69,9 @@ type Query struct {
 	Actors          []string `url:"actors,omitempty" schema:"actors" json:"actors"`
 	Tags            []string `url:"tags,omitempty" schema:"tags" json:"tags"`
 	Importance      string   `url:"importance,omitempty" schema:"importance" json:"importance"`
-	Updated         string   `url:"updated,omitempty" schema:"updated" json:"updated"`
-	Created         string   `url:"created,omitempty" schema:"created" json:"created"`
 }
 
+// Returns true if the query values are empty
 func (q *Query) IsEmpty() bool {
 
 	if q.Origin == "" && q.Key == "" && len(q.Entities) == 0 && len(q.Actors) == 0 {
@@ -76,6 +83,7 @@ func (q *Query) IsEmpty() bool {
 // Determines whether an event matched the query
 func (q *Query) Match(e Event) bool {
 
+	// empty query matches everything
 	if q.IsEmpty() {
 		return true
 	}
@@ -86,9 +94,12 @@ func (q *Query) Match(e Event) bool {
 	}
 
 	for _, pair := range orPairs {
+
+		//should orMatchStringAny return true if q (pair[0]) is empty?
 		if pair[0] != "" && !orMatchStringAny(pair[0], pair[1]) {
 			return false
 		}
+
 	}
 
 	arrays := []MatchArray{
