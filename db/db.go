@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
 	"log"
@@ -24,6 +25,17 @@ type TransactionFunc func(*sql.Tx) error
 
 type PostgresDataSource struct {
 	pg *sql.DB
+}
+
+// Returns true if a string is in the slice
+// TODO: move to a better place
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }
 
 // Converts a row to an event
@@ -214,6 +226,10 @@ func (d *PostgresDataSource) wrapTransaction(t TransactionFunc) (err error) {
 }
 
 func (p *PostgresDataSource) AggregateType(q eventhub.Query, s string) (map[string]int, error) {
+
+	if !stringInSlice(s, []string{"entities", "other_references", "actors", "tags"}) {
+		return nil, errors.New("Invalid type")
+	}
 
 	query, args := buildAggregateQuery(q, s)
 	m := make(map[string]int)
