@@ -62,3 +62,54 @@ func TestMatchFilter(t *testing.T) {
 	}
 
 }
+
+func TestImportanceFilter(t *testing.T) {
+
+	key := "some.key"
+	q := Query{}
+	q.Importance = "3"
+	q.Key = key
+
+	event := NewEvent(
+		key,
+		nil,
+		nil,
+		"",
+		3,
+		"",
+		nil,
+		nil,
+		nil,
+		nil)
+
+	if q.Match(*event) != true {
+		t.Errorf("Query %+v should match Event: %+v", q, event)
+	}
+
+	q.Importance = "gt3"
+
+	if q.Match(*event) == true {
+		t.Errorf("Query %+v should not match Event: %+v", q, event)
+	}
+
+	event.Importance = 4
+	q.Importance = "gte3"
+
+	if q.Match(*event) != true {
+		t.Errorf("Query %+v should match Event: %+v", q, event)
+	}
+
+	event.Importance = 2
+	q.Importance = "lt3"
+
+	if q.Match(*event) != true {
+		t.Errorf("Query %+v should match Event: %+v", q, event)
+	}
+
+	q.Importance = "lte3"
+
+	if q.Match(*event) != true {
+		t.Errorf("Query %+v should match Event: %+v", q, event)
+	}
+
+}

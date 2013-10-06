@@ -1,6 +1,11 @@
 package eventhub
 
-import "strings"
+import (
+	"log"
+	"strconv"
+	"strings"
+	"unicode"
+)
 
 type MatchArray [2][]string
 
@@ -112,5 +117,27 @@ func (q *Query) Match(e Event) bool {
 			return false
 		}
 	}
+
+	if q.Importance != "" {
+		val, err := strconv.Atoi(strings.TrimFunc(q.Importance, unicode.IsLetter))
+		if err != nil {
+			//maybe don't fatal
+			log.Fatal(err)
+			return false
+		}
+
+		switch strings.TrimFunc(q.Importance, unicode.IsDigit) {
+		case "gte":
+			return (e.Importance >= val)
+		case "gt":
+			return (e.Importance > val)
+		case "lte":
+			return (e.Importance <= val)
+		case "lt":
+			return (e.Importance < val)
+		}
+		return (val == e.Importance)
+	}
+
 	return true
 }
