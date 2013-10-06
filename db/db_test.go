@@ -47,5 +47,6 @@ func TestDB(t *testing.T) {
 	eventhub.QueryByTest(t, p)
 	clear()
 	eventhub.QueryTest(t, p)
-
+	clear()
+	eventhub.AggregateTypeTest(t, p)
 }

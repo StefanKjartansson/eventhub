@@ -213,6 +213,26 @@ func (d *PostgresDataSource) wrapTransaction(t TransactionFunc) (err error) {
 
 }
 
+func (p *PostgresDataSource) AggregateType(q eventhub.Query, s string) (map[string]int, error) {
+
+	query, args := buildAggregateQuery(q, s)
+	m := make(map[string]int)
+
+	err := p.wrapTransaction(func(tx *sql.Tx) error {
+		rows, err := tx.Query(query, args...)
+		defer rows.Close()
+		for rows.Next() {
+			var cStr string
+			var cInt int
+			rows.Scan(&cStr, &cInt)
+			m[cStr] = cInt
+		}
+		return err
+	})
+
+	return m, err
+}
+
 func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) {
 
 	events := []*eventhub.Event{}
