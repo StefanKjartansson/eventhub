@@ -82,6 +82,43 @@ func (d *LocalMemoryStore) Query(q Query) ([]*Event, error) {
 	return matched, nil
 }
 
+func (d *LocalMemoryStore) AggregateType(q Query, s string) (map[string]int, error) {
+
+	m := make(map[string]int)
+
+	evs, err := d.Query(q)
+
+	if err != nil {
+		return m, err
+	}
+
+	sumArray := func(arr []string) {
+		for _, i := range arr {
+			_, ok := m[i]
+			if !ok {
+				m[i] = 1
+			} else {
+				m[i]++
+			}
+		}
+	}
+
+	for _, e := range evs {
+		switch s {
+		case "entities":
+			sumArray(e.Entities)
+		case "other_references":
+			sumArray(e.OtherReferences)
+		case "actors":
+			sumArray(e.Actors)
+		case "tags":
+			sumArray(e.Tags)
+		}
+	}
+
+	return m, nil
+}
+
 func (d *LocalMemoryStore) Clear() {
 	d.m.Lock()
 	defer d.m.Unlock()

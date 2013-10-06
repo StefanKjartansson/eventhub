@@ -12,4 +12,6 @@ func TestLocalMemoryStore(t *testing.T) {
 	QueryByTest(t, d)
 	d.Clear()
 	QueryTest(t, d)
+	d.Clear()
+	AggregateTypeTest(t, d)
 }
