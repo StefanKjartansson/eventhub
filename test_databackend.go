@@ -255,3 +255,43 @@ func InsertUpdateTest(t *testing.T, d DataBackend) {
 		t.Fatal(err)
 	}
 }
+
+func AggregateTypeTest(t *testing.T, d DataBackend) {
+
+	for i := 0; i < 20; i++ {
+
+		key := "foo.bar"
+		if i%2 == 0 {
+			key = "foo.baz"
+		}
+
+		d.Save(NewEvent(
+			key,
+			nil,
+			nil,
+			"My event",
+			3,
+			"mysystem",
+			[]string{"ns/foo", "ns/moo"},
+			[]string{"ref/1"},
+			[]string{"someone"},
+			[]string{"tag/1"}))
+	}
+
+	m := make(map[string]int)
+	m["foo.bar"] = 10
+	m[""] = 20
+
+	for key, value := range m {
+		q := Query{}
+		q.Key = key
+		r, err := d.AggregateType(q, "entities")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r["ns/foo"] != value {
+			t.Fatalf("Result should be %d", value)
+		}
+	}
+
+}
