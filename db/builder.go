@@ -30,7 +30,15 @@ func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
 	delimiter := " and "
 	writeDelimiter := false
 
-	buffer.WriteString("select * from event where ")
+	buffer.WriteString("select * from event")
+
+	//Early exit, query is empty
+	if q.IsEmpty() {
+		buffer.WriteString(" order by updated desc;")
+		return buffer.String(), args
+	}
+
+	buffer.WriteString(" where ")
 
 	if q.Key != "" {
 		buffer.WriteString("key in (")
