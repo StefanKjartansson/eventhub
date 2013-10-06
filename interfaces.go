@@ -10,6 +10,7 @@ type DataBackend interface {
 	Save(e *Event) error
 	GetById(id int) (*Event, error)
 	Query(q Query) ([]*Event, error)
+	AggregateType(q Query, s string) (map[string]int, error)
 }
 
 type Broadcaster interface {
