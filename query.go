@@ -75,6 +75,11 @@ type Query struct {
 	Importance      string   `url:"importance,omitempty" schema:"importance" json:"importance"`
 }
 
+// Return true if s is a valid array type
+func (q *Query) IsValidArrayType(s string) bool {
+	return stringInSlice(s, []string{"entities", "other_references", "actors", "tags"})
+}
+
 // Returns true if the query values are empty
 func (q *Query) IsEmpty() bool {
 
