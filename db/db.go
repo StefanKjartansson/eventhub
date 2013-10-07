@@ -27,17 +27,6 @@ type PostgresDataSource struct {
 	pg *sql.DB
 }
 
-// Returns true if a string is in the slice
-// TODO: move to a better place
-func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
-}
-
 // Converts a row to an event
 func scanRow(row *sql.Rows, e *eventhub.Event) error {
 
@@ -227,7 +216,7 @@ func (d *PostgresDataSource) wrapTransaction(t TransactionFunc) (err error) {
 
 func (p *PostgresDataSource) AggregateType(q eventhub.Query, s string) (map[string]int, error) {
 
-	if !stringInSlice(s, []string{"entities", "other_references", "actors", "tags"}) {
+	if !q.IsValidArrayType(s) {
 		return nil, errors.New("Invalid type")
 	}
 
