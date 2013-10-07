@@ -4,6 +4,7 @@ package rest
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/StefanKjartansson/eventhub"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
@@ -14,6 +15,12 @@ import (
 	"strings"
 )
 
+var (
+	ErrSaveExisting      = errors.New("Save existing resource")
+	ErrUpdateNonExisting = errors.New("Update non-existing resource")
+	ErrMissingType       = errors.New("Missing type param")
+)
+
 type RESTService struct {
 	databackend eventhub.DataBackend
 	address     string
@@ -21,48 +28,30 @@ type RESTService struct {
 	events      chan *eventhub.Event
 }
 
-func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) {
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
+// Returns the entity prefix
+func getEntity(req *http.Request) (string, error) {
 	vars := mux.Vars(req)
 	entity := vars["entity"]
-	id := vars["id"]
-	q := eventhub.Query{}
-	q.Entities = append(q.Entities, strings.Join([]string{entity, id}, "/"))
-	events, err := r.databackend.Query(q)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	if entity == "" {
+		return "", errors.New("Entity can't be empty")
 	}
-	enc := json.NewEncoder(w)
-	enc.Encode(events)
-
+	id := vars["id"]
+	if id == "" {
+		return "", errors.New("Id can't be empty")
+	}
+	return strings.Join([]string{entity, id}, "/"), nil
 }
 
-func (r *RESTService) retrieveHandler(w http.ResponseWriter, req *http.Request) {
-
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	vars := mux.Vars(req)
-	id := vars["id"]
-	idAsInt, err := strconv.Atoi(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	event, err := r.databackend.GetById(idAsInt)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	enc := json.NewEncoder(w)
-	enc.Encode(event)
-
+// Parses a Query from the request
+func getQuery(req *http.Request) (eventhub.Query, error) {
+	req.ParseForm()
+	q := new(eventhub.Query)
+	decoder := schema.NewDecoder()
+	err := decoder.Decode(q, req.Form)
+	return *q, err
 }
 
+// Parses an event from the post body
 func (r *RESTService) parseEvent(body io.ReadCloser) (eventhub.Event, error) {
 	decoder := json.NewDecoder(body)
 	defer body.Close()
@@ -71,110 +60,161 @@ func (r *RESTService) parseEvent(body io.ReadCloser) (eventhub.Event, error) {
 	return e, err
 }
 
-func (r *RESTService) saveHandler(w http.ResponseWriter, req *http.Request) {
+// Wraps http.HandlerFunc, adds error response and frequently used headers
+func handlerWrapper(f func(http.ResponseWriter, *http.Request) (error, int)) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+
+		err, status := f(w, r)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, err.Error(), status)
+		}
+	}
+}
+
+// GET: /api/entity/id/
+func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) (error, int) {
+	e, err := getEntity(req)
+	if err != nil {
+		return err, http.StatusBadRequest
+	}
+	q := eventhub.Query{}
+	q.Entities = append(q.Entities, e)
+	events, err := r.databackend.Query(q)
+	if err != nil {
+		return err, http.StatusInternalServerError
+	}
+	enc := json.NewEncoder(w)
+	enc.Encode(events)
+	return nil, http.StatusOK
+}
+
+// GET: /api/id/
+func (r *RESTService) retrieveHandler(w http.ResponseWriter, req *http.Request) (error, int) {
 
 	vars := mux.Vars(req)
 	id := vars["id"]
+	idAsInt, err := strconv.Atoi(id)
+	if err != nil {
+		return err, http.StatusBadRequest
+	}
+	event, err := r.databackend.GetById(idAsInt)
+	if err != nil {
+		return err, http.StatusInternalServerError
+	}
+	enc := json.NewEncoder(w)
+	enc.Encode(event)
+	return nil, http.StatusOK
+}
 
+// POST: /
+// PUT: /id/
+// Save or update
+func (r *RESTService) saveHandler(w http.ResponseWriter, req *http.Request) (error, int) {
+
+	vars := mux.Vars(req)
+	id := vars["id"]
 	e, err := r.parseEvent(req.Body)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return err, http.StatusBadRequest
 	}
 	if id == "" && e.ID != 0 {
-		http.Error(w, "Can't POST existing resource", http.StatusBadRequest)
-		return
+		return ErrSaveExisting, http.StatusBadRequest
 	}
-
 	if id != "" && e.ID == 0 {
-		http.Error(w, "No ID for update", http.StatusBadRequest)
-		return
+		return ErrUpdateNonExisting, http.StatusBadRequest
 	}
-
-	switch e.ID {
-	case 0:
+	if e.ID == 0 {
 		w.WriteHeader(http.StatusCreated)
-	default:
+	} else {
 		w.WriteHeader(http.StatusAccepted)
 	}
-
 	r.events <- &e
+	return nil, 0
 }
 
-func (r *RESTService) search(q eventhub.Query, entity string) ([]*eventhub.Event, error) {
-	if entity != "" {
-		q.Entities = append(q.Entities, entity)
-	}
-	return r.databackend.Query(q)
-}
-
-func (r *RESTService) searchHandler(w http.ResponseWriter, req *http.Request) {
-	req.ParseForm()
-	q := new(eventhub.Query)
-	decoder := schema.NewDecoder()
-	err := decoder.Decode(q, req.Form)
+// GET: /api/search
+func (r *RESTService) searchHandler(w http.ResponseWriter, req *http.Request) (error, int) {
+	q, err := getQuery(req)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err, http.StatusBadRequest
 	}
-
-	events, err := r.search(*q, "")
+	events, err := r.databackend.Query(q)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if len(events) == 0 {
-		http.NotFound(w, req)
-		return
+		return err, http.StatusInternalServerError
 	}
 	enc := json.NewEncoder(w)
 	enc.Encode(events)
+	return nil, http.StatusOK
 }
 
-func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Request) {
+// GET: /api/search
+func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Request) (error, int) {
 
-	req.ParseForm()
+	e, err := getEntity(req)
+	if err != nil {
+		return err, http.StatusBadRequest
+	}
+
+	q, err := getQuery(req)
+	if err != nil {
+		return err, http.StatusInternalServerError
+	}
+
+	q.Entities = append(q.Entities, e)
+
+	events, err := r.databackend.Query(q)
+	if err != nil {
+		return err, http.StatusInternalServerError
+	}
+	enc := json.NewEncoder(w)
+	enc.Encode(events)
+	return nil, http.StatusOK
+}
+
+func (r *RESTService) aggregateHandler(w http.ResponseWriter, req *http.Request) (error, int) {
 	vars := mux.Vars(req)
-	entity := vars["entity"]
-	id := vars["id"]
-
-	q := new(eventhub.Query)
-	decoder := schema.NewDecoder()
-	err := decoder.Decode(q, req.Form)
-
-	events, err := r.search(*q, strings.Join([]string{entity, id}, "/"))
+	agtype := vars["type"]
+	if agtype == "" {
+		return ErrMissingType, http.StatusBadRequest
+	}
+	q, err := getQuery(req)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		return err, http.StatusInternalServerError
 	}
-	if len(events) == 0 {
-		http.NotFound(w, req)
-		return
+
+	m, err := r.databackend.AggregateType(q, agtype)
+	if err != nil {
+		return err, http.StatusInternalServerError
 	}
+
 	enc := json.NewEncoder(w)
-	enc.Encode(events)
+	enc.Encode(m)
+	return nil, http.StatusOK
 }
 
 func (r *RESTService) getRouter() (*mux.Router, error) {
 
 	router := mux.NewRouter()
 	s := router.PathPrefix(r.prefix).Subrouter()
-	s.HandleFunc("/{entity}/{id}/", r.entityHandler).Methods("GET")
-	s.HandleFunc("/{entity}/{id}/search", r.entitySearchHandler).Methods("GET")
-	s.HandleFunc("/", r.saveHandler).Methods("POST")
-	s.HandleFunc("/{id}/", r.retrieveHandler).Methods("GET")
-	s.HandleFunc("/{id}/", r.saveHandler).Methods("PUT")
-	s.HandleFunc("/search", r.searchHandler).Methods("GET")
+	s.HandleFunc("/{entity}/{id}/", handlerWrapper(r.entityHandler)).Methods("GET")
+	s.HandleFunc("/{entity}/{id}/search", handlerWrapper(r.entitySearchHandler)).Methods("GET")
+	s.HandleFunc("/", handlerWrapper(r.saveHandler)).Methods("POST")
+	s.HandleFunc("/{id}/", handlerWrapper(r.retrieveHandler)).Methods("GET")
+	s.HandleFunc("/{id}/", handlerWrapper(r.saveHandler)).Methods("PUT")
+	s.HandleFunc("/search", handlerWrapper(r.searchHandler)).Methods("GET")
+	s.HandleFunc("/aggregate/{type}", handlerWrapper(r.aggregateHandler)).Methods("GET")
 	return router, nil
 }
 
 func NewRESTService(prefix string, address string) *RESTService {
 	return &RESTService{
-		prefix:  prefix,
+		prefix:  strings.TrimRight(prefix, "/"),
 		address: address,
 		events:  make(chan *eventhub.Event),
 	}

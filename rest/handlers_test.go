@@ -33,7 +33,7 @@ func startServer() {
 		"myapp",
 		[]string{"user/foo", "ns/moo"},
 		nil,
-		nil,
+		[]string{"actor1", "actor2"},
 		nil)
 
 	secondEvent = eventhub.NewEvent(
@@ -45,7 +45,7 @@ func startServer() {
 		"myapp",
 		[]string{"user/foo", "ns/moo"},
 		nil,
-		nil,
+		[]string{"actor1", "actor2", "actor3"},
 		nil)
 
 	err := d.Save(firstEvent)
@@ -238,5 +238,29 @@ func TestSearch(t *testing.T) {
 	url := fmt.Sprintf("http://%s/user/foo/search?%s", serverAddr, v.Encode())
 	results := []eventhub.Event{}
 	getJSON(t, url, &results)
+
+}
+
+func TestAggregateType(t *testing.T) {
+	once.Do(startServer)
+	q := eventhub.Query{
+		Key: "myapp.user.login OR myapp.user.logout",
+	}
+	v, err := query.Values(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	url := fmt.Sprintf("http://%s/aggregate/actors?%s", serverAddr, v.Encode())
+	m := make(map[string]int)
+	getJSON(t, url, &m)
+
+	if m["actor1"] != 2 {
+		t.Fatalf("Expected 2, got %d, m: %+v", m["actor1"], m)
+	}
+
+	if m["actor3"] != 1 {
+		t.Fatalf("Expected 2, got %d, m: %+v", m["actor3"], m)
+	}
 
 }
