@@ -83,7 +83,10 @@ func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) (e
 	if err != nil {
 		return err, http.StatusBadRequest
 	}
-	q := eventhub.Query{}
+	q, err := getQuery(req)
+	if err != nil {
+		return err, http.StatusInternalServerError
+	}
 	q.Entities = append(q.Entities, e)
 	events, err := r.databackend.Query(q)
 	if err != nil {
@@ -153,30 +156,6 @@ func (r *RESTService) searchHandler(w http.ResponseWriter, req *http.Request) (e
 	return nil, http.StatusOK
 }
 
-// GET: /api/search
-func (r *RESTService) entitySearchHandler(w http.ResponseWriter, req *http.Request) (error, int) {
-
-	e, err := getEntity(req)
-	if err != nil {
-		return err, http.StatusBadRequest
-	}
-
-	q, err := getQuery(req)
-	if err != nil {
-		return err, http.StatusInternalServerError
-	}
-
-	q.Entities = append(q.Entities, e)
-
-	events, err := r.databackend.Query(q)
-	if err != nil {
-		return err, http.StatusInternalServerError
-	}
-	enc := json.NewEncoder(w)
-	enc.Encode(events)
-	return nil, http.StatusOK
-}
-
 func (r *RESTService) aggregateHandler(w http.ResponseWriter, req *http.Request) (error, int) {
 	vars := mux.Vars(req)
 	agtype := vars["type"]
@@ -203,7 +182,6 @@ func (r *RESTService) getRouter() (*mux.Router, error) {
 	router := mux.NewRouter()
 	s := router.PathPrefix(r.prefix).Subrouter()
 	s.HandleFunc("/{entity}/{id}/", handlerWrapper(r.entityHandler)).Methods("GET")
-	s.HandleFunc("/{entity}/{id}/search", handlerWrapper(r.entitySearchHandler)).Methods("GET")
 	s.HandleFunc("/", handlerWrapper(r.saveHandler)).Methods("POST")
 	s.HandleFunc("/{id}/", handlerWrapper(r.retrieveHandler)).Methods("GET")
 	s.HandleFunc("/{id}/", handlerWrapper(r.saveHandler)).Methods("PUT")
