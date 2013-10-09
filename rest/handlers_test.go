@@ -235,7 +235,7 @@ func TestSearch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	url := fmt.Sprintf("http://%s/user/foo/search?%s", serverAddr, v.Encode())
+	url := fmt.Sprintf("http://%s/user/foo/?%s", serverAddr, v.Encode())
 	results := []eventhub.Event{}
 	getJSON(t, url, &results)
 
@@ -261,6 +261,27 @@ func TestAggregateType(t *testing.T) {
 
 	if m["actor3"] != 1 {
 		t.Fatalf("Expected 2, got %d, m: %+v", m["actor3"], m)
+	}
+
+}
+
+func TestImportanceFilter(t *testing.T) {
+
+	//Tests entity + filter
+	q := eventhub.Query{
+		Importance: "lt3",
+	}
+	v, err := query.Values(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	url := fmt.Sprintf("http://%s/user/foo/?%s", serverAddr, v.Encode())
+	log.Println(url)
+	results := []eventhub.Event{}
+	getJSON(t, url, &results)
+
+	if len(results) != 1 {
+		t.Fatalf("Got %d, expected 1, q: %+v, events: %+v", len(results), q, results)
 	}
 
 }
