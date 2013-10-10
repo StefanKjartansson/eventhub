@@ -7,7 +7,6 @@ import (
 	"errors"
 	"github.com/StefanKjartansson/eventhub"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
 	"io"
 	"log"
 	"net/http"
@@ -43,12 +42,9 @@ func getEntity(req *http.Request) (string, error) {
 }
 
 // Parses a Query from the request
-func getQuery(req *http.Request) (eventhub.Query, error) {
+func getQuery(req *http.Request) (*eventhub.Query, error) {
 	req.ParseForm()
-	q := new(eventhub.Query)
-	decoder := schema.NewDecoder()
-	err := decoder.Decode(q, req.Form)
-	return *q, err
+	return eventhub.QueryFromValues(req.Form)
 }
 
 // Parses an event from the post body
@@ -88,7 +84,7 @@ func (r *RESTService) entityHandler(w http.ResponseWriter, req *http.Request) (e
 		return err, http.StatusInternalServerError
 	}
 	q.Entities = append(q.Entities, e)
-	events, err := r.databackend.Query(q)
+	events, err := r.databackend.Query(*q)
 	if err != nil {
 		return err, http.StatusInternalServerError
 	}
@@ -147,7 +143,7 @@ func (r *RESTService) searchHandler(w http.ResponseWriter, req *http.Request) (e
 	if err != nil {
 		return err, http.StatusBadRequest
 	}
-	events, err := r.databackend.Query(q)
+	events, err := r.databackend.Query(*q)
 	if err != nil {
 		return err, http.StatusInternalServerError
 	}
@@ -167,7 +163,7 @@ func (r *RESTService) aggregateHandler(w http.ResponseWriter, req *http.Request)
 		return err, http.StatusInternalServerError
 	}
 
-	m, err := r.databackend.AggregateType(q, agtype)
+	m, err := r.databackend.AggregateType(*q, agtype)
 	if err != nil {
 		return err, http.StatusInternalServerError
 	}

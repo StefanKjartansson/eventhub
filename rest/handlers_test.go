@@ -275,7 +275,7 @@ func TestImportanceFilter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	url := fmt.Sprintf("http://%s/user/foo/?%s", serverAddr, v.Encode())
+	url := fmt.Sprintf("http://%s/user/foo/?%s&from=01.01.1994", serverAddr, v.Encode())
 	log.Println(url)
 	results := []eventhub.Event{}
 	getJSON(t, url, &results)
