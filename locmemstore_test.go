@@ -7,11 +7,8 @@ import (
 func TestLocalMemoryStore(t *testing.T) {
 
 	d := NewLocalMemoryStore()
-	InsertUpdateTest(t, d)
-	d.Clear()
-	QueryByTest(t, d)
-	d.Clear()
-	QueryTest(t, d)
-	d.Clear()
-	AggregateTypeTest(t, d)
+	c := func() {
+		d.Clear()
+	}
+	RunDataBackendSuite(t, d, c)
 }

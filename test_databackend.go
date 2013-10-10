@@ -46,6 +46,21 @@ func bootstrapData(d DataBackend) {
 
 }
 
+type clearfunc func()
+
+func RunDataBackendSuite(t *testing.T, d DataBackend, clear clearfunc) {
+	InsertUpdateTest(t, d)
+	clear()
+	QueryByTest(t, d)
+	clear()
+	QueryTest(t, d)
+	clear()
+	AggregateTypeTest(t, d)
+	clear()
+	DateRangeFilterTest(t, d)
+	clear()
+}
+
 func QueryTest(t *testing.T, d DataBackend) {
 
 	d.Save(NewEvent(
@@ -300,4 +315,56 @@ func AggregateTypeTest(t *testing.T, d DataBackend) {
 	if err == nil {
 		t.Fatal("Should have been raised")
 	}
+}
+
+func DateRangeFilterTest(t *testing.T, d DataBackend) {
+
+	q := Query{}
+	q.From = time.Date(2013, time.September, 20, 9, 1, 45, 0, time.UTC)
+	q.To = time.Date(2013, time.September, 20, 9, 1, 47, 0, time.UTC)
+
+	t.Logf("q: %+v", q)
+
+	e := NewEvent(
+		"",
+		nil,
+		nil,
+		"My event",
+		3,
+		"mysystem",
+		[]string{"ns/foo", "ns/moo"},
+		[]string{"ref/1"},
+		[]string{"someone"},
+		[]string{"tag/1"})
+
+	e.Created = time.Date(2013, time.September, 20, 9, 1, 46, 0, time.UTC)
+
+	d.Save(e)
+
+	e2 := NewEvent(
+		"",
+		nil,
+		nil,
+		"My event",
+		3,
+		"mysystem",
+		[]string{"ns/foo", "ns/moo"},
+		[]string{"ref/1"},
+		[]string{"someone"},
+		[]string{"tag/1"})
+
+	e2.Created = time.Date(2013, time.September, 20, 9, 1, 48, 0, time.UTC)
+
+	d.Save(e2)
+
+	evs, err := d.Query(q)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(evs) != 1 {
+		t.Fatalf("Query results should be 1, was %+v", evs)
+	}
+
 }
