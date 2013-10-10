@@ -42,11 +42,5 @@ func TestDB(t *testing.T) {
 		t.Fatal("PostgresDataSource has error:", err)
 	}
 
-	eventhub.InsertUpdateTest(t, p)
-	clear()
-	eventhub.QueryByTest(t, p)
-	clear()
-	eventhub.QueryTest(t, p)
-	clear()
-	eventhub.AggregateTypeTest(t, p)
+	eventhub.RunDataBackendSuite(t, p, clear)
 }
