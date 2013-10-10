@@ -2,7 +2,7 @@ package db
 
 import (
 	"database/sql"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	_ "github.com/lib/pq"
 	"testing"
 )
@@ -42,5 +42,5 @@ func TestDB(t *testing.T) {
 		t.Fatal("PostgresDataSource has error:", err)
 	}
 
-	eventhub.RunDataBackendSuite(t, p, clear)
+	straumur.RunDataBackendSuite(t, p, clear)
 }

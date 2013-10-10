@@ -3,7 +3,7 @@ package ws
 import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"io"
 )
 
@@ -14,9 +14,9 @@ type Client struct {
 	id     int
 	ws     *websocket.Conn
 	server *Server
-	ch     chan *eventhub.Event
+	ch     chan *straumur.Event
 	doneCh chan bool
-	query  eventhub.Query
+	query  straumur.Query
 }
 
 func NewClient(ws *websocket.Conn, server *Server) *Client {
@@ -26,9 +26,9 @@ func NewClient(ws *websocket.Conn, server *Server) *Client {
 	}
 
 	maxId++
-	ch := make(chan *eventhub.Event)
+	ch := make(chan *straumur.Event)
 	doneCh := make(chan bool)
-	query := eventhub.Query{}
+	query := straumur.Query{}
 
 	return &Client{maxId, ws, server, ch, doneCh, query}
 }
@@ -37,7 +37,7 @@ func (c *Client) Conn() *websocket.Conn {
 	return c.ws
 }
 
-func (c *Client) Write(e *eventhub.Event) {
+func (c *Client) Write(e *straumur.Event) {
 	select {
 	case c.ch <- e:
 	default:
@@ -87,7 +87,7 @@ func (c *Client) listenRead() {
 
 		// read data from websocket connection
 		default:
-			var q eventhub.Query
+			var q straumur.Query
 			err := websocket.JSON.Receive(c.ws, &q)
 			if err == io.EOF {
 				c.doneCh <- true

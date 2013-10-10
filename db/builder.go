@@ -3,7 +3,7 @@ package db
 import (
 	"bytes"
 	"fmt"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"strings"
 )
 
@@ -22,7 +22,7 @@ func writeArray(paramCount int, args *[]interface{}, key string, arr []string) (
 	return paramCount, buffer.String()
 }
 
-func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
+func buildSelectQuery(q straumur.Query) (string, []interface{}) {
 
 	var buffer bytes.Buffer
 	args := []interface{}{}

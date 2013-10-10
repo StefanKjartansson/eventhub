@@ -3,7 +3,7 @@ package ws
 import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"io"
 	"log"
 	"net/http/httptest"
@@ -18,10 +18,10 @@ var once sync.Once
 var d DummyFeed
 
 type DummyFeed struct {
-	events chan *eventhub.Event
+	events chan *straumur.Event
 }
 
-func (d *DummyFeed) Updates() <-chan *eventhub.Event {
+func (d *DummyFeed) Updates() <-chan *straumur.Event {
 	return d.events
 }
 
@@ -30,7 +30,7 @@ func (d *DummyFeed) Close() error {
 }
 
 func startServer() {
-	d = DummyFeed{make(chan *eventhub.Event)}
+	d = DummyFeed{make(chan *straumur.Event)}
 	s := NewServer("/ws", &d)
 	go s.Listen()
 	server := httptest.NewServer(nil)
@@ -48,12 +48,12 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		return
 	}
 
-	q := eventhub.Query{}
+	q := straumur.Query{}
 	q.Entities = []string{"ns/moo"}
 	t.Logf("Query filter: %+v", q)
 	websocket.JSON.Send(conn, q)
 
-	e := eventhub.NewEvent(
+	e := straumur.NewEvent(
 		"myapp.user.login",
 		nil,
 		nil,
@@ -67,15 +67,15 @@ func TestWebSocketBroadcaster(t *testing.T) {
 
 	d.events <- e
 
-	var event eventhub.Event
+	var event straumur.Event
 	if err := websocket.JSON.Receive(conn, &event); err != nil {
 		t.Errorf("Read: %v", err)
 	}
 
-	incoming := make(chan eventhub.Event)
+	incoming := make(chan straumur.Event)
 	go readEvents(conn, incoming)
 
-	filtered := eventhub.NewEvent(
+	filtered := straumur.NewEvent(
 		"Should filter",
 		nil,
 		nil,
@@ -93,7 +93,7 @@ func TestWebSocketBroadcaster(t *testing.T) {
 
 	d.events <- filtered
 
-	d.events <- eventhub.NewEvent(
+	d.events <- straumur.NewEvent(
 		"foo.bar",
 		nil,
 		nil,
@@ -113,9 +113,9 @@ func TestWebSocketBroadcaster(t *testing.T) {
 
 }
 
-func readEvents(ws *websocket.Conn, incoming chan eventhub.Event) {
+func readEvents(ws *websocket.Conn, incoming chan straumur.Event) {
 	for {
-		var event eventhub.Event
+		var event straumur.Event
 		err := websocket.JSON.Receive(ws, &event)
 		if err == nil {
 			log.Println(event)

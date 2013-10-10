@@ -3,11 +3,11 @@ package db
 import (
 	"bytes"
 	"fmt"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"strings"
 )
 
-func buildAggregateQuery(q eventhub.Query, arrayType string) (string, []interface{}) {
+func buildAggregateQuery(q straumur.Query, arrayType string) (string, []interface{}) {
 
 	var buffer bytes.Buffer
 	buffer.WriteString("select i as name, count(*) as count from ")

@@ -1,4 +1,4 @@
-package eventhub
+package straumur
 
 type EventFeed interface {
 	Updates() <-chan *Event

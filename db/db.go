@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	_ "github.com/lib/pq"
 	"log"
 	"time"
@@ -28,7 +28,7 @@ type PostgresDataSource struct {
 }
 
 // Converts a row to an event
-func scanRow(row *sql.Rows, e *eventhub.Event) error {
+func scanRow(row *sql.Rows, e *straumur.Event) error {
 
 	var entities StringSlice
 	var references StringSlice
@@ -81,9 +81,9 @@ func scanRow(row *sql.Rows, e *eventhub.Event) error {
 }
 
 //Gets an event by id
-func (p *PostgresDataSource) GetById(id int) (*eventhub.Event, error) {
+func (p *PostgresDataSource) GetById(id int) (*straumur.Event, error) {
 
-	var e eventhub.Event
+	var e straumur.Event
 
 	err := p.wrapTransaction(func(tx *sql.Tx) error {
 		rows, err := tx.Query(`
@@ -214,7 +214,7 @@ func (d *PostgresDataSource) wrapTransaction(t TransactionFunc) (err error) {
 
 }
 
-func (p *PostgresDataSource) AggregateType(q eventhub.Query, s string) (map[string]int, error) {
+func (p *PostgresDataSource) AggregateType(q straumur.Query, s string) (map[string]int, error) {
 
 	if !q.IsValidArrayType(s) {
 		return nil, errors.New("Invalid type")
@@ -238,9 +238,9 @@ func (p *PostgresDataSource) AggregateType(q eventhub.Query, s string) (map[stri
 	return m, err
 }
 
-func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) {
+func (p *PostgresDataSource) Query(q straumur.Query) ([]*straumur.Event, error) {
 
-	events := []*eventhub.Event{}
+	events := []*straumur.Event{}
 
 	query, args := buildSelectQuery(q)
 
@@ -248,7 +248,7 @@ func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) 
 		rows, err := tx.Query(query, args...)
 		defer rows.Close()
 		for rows.Next() {
-			var e eventhub.Event
+			var e straumur.Event
 			err = scanRow(rows, &e)
 			if err != nil {
 				return err
@@ -262,7 +262,7 @@ func (p *PostgresDataSource) Query(q eventhub.Query) ([]*eventhub.Event, error) 
 }
 
 // Saves or updates an event
-func (p *PostgresDataSource) Save(e *eventhub.Event) (err error) {
+func (p *PostgresDataSource) Save(e *straumur.Event) (err error) {
 
 	switch e.ID {
 	case 0:

@@ -5,7 +5,7 @@ package rest
 import (
 	"encoding/json"
 	"errors"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"github.com/gorilla/mux"
 	"io"
 	"log"
@@ -21,10 +21,10 @@ var (
 )
 
 type RESTService struct {
-	databackend eventhub.DataBackend
+	databackend straumur.DataBackend
 	address     string
 	prefix      string
-	events      chan *eventhub.Event
+	events      chan *straumur.Event
 }
 
 // Returns the entity prefix
@@ -42,16 +42,16 @@ func getEntity(req *http.Request) (string, error) {
 }
 
 // Parses a Query from the request
-func getQuery(req *http.Request) (*eventhub.Query, error) {
+func getQuery(req *http.Request) (*straumur.Query, error) {
 	req.ParseForm()
-	return eventhub.QueryFromValues(req.Form)
+	return straumur.QueryFromValues(req.Form)
 }
 
 // Parses an event from the post body
-func (r *RESTService) parseEvent(body io.ReadCloser) (eventhub.Event, error) {
+func (r *RESTService) parseEvent(body io.ReadCloser) (straumur.Event, error) {
 	decoder := json.NewDecoder(body)
 	defer body.Close()
-	var e eventhub.Event
+	var e straumur.Event
 	err := decoder.Decode(&e)
 	return e, err
 }
@@ -190,12 +190,12 @@ func NewRESTService(prefix string, address string) *RESTService {
 	return &RESTService{
 		prefix:  strings.TrimRight(prefix, "/"),
 		address: address,
-		events:  make(chan *eventhub.Event),
+		events:  make(chan *straumur.Event),
 	}
 }
 
 //DataService interface
-func (r *RESTService) Run(d eventhub.DataBackend, ec chan error) {
+func (r *RESTService) Run(d straumur.DataBackend, ec chan error) {
 
 	r.databackend = d
 
@@ -214,7 +214,7 @@ func (r *RESTService) Run(d eventhub.DataBackend, ec chan error) {
 }
 
 //EventFeed interface
-func (r *RESTService) Updates() <-chan *eventhub.Event {
+func (r *RESTService) Updates() <-chan *straumur.Event {
 	return r.events
 }
 

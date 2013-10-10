@@ -1,13 +1,13 @@
 package db
 
 import (
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"testing"
 )
 
-type QueryBuilder func(e *eventhub.Event) (string, []interface{}, error)
+type QueryBuilder func(e *straumur.Event) (string, []interface{}, error)
 
-func queryTest(t *testing.T, expected string, e *eventhub.Event, qb QueryBuilder) {
+func queryTest(t *testing.T, expected string, e *straumur.Event, qb QueryBuilder) {
 
 	expectedArgs := []interface{}{
 		e.Key,
@@ -62,7 +62,7 @@ func TestBuildInsertQuery(t *testing.T) {
 
 	const expected = `insert into "event" ("key", "key_params", "created", "updated", "payload", "description", "importance", "origin", "entities", "other_references", "actors", "tags") values ($1, $2, $3, $4, $5, $6, $7, $8,ARRAY[$9, $10]::text[], ARRAY[]::text[], ARRAY[$11]::text[], ARRAY[]::text[]) returning "id", "created", "updated";`
 
-	e := eventhub.NewEvent(
+	e := straumur.NewEvent(
 		"foo.bar",
 		nil,
 		nil,
@@ -82,7 +82,7 @@ func TestBuildUpdateQuery(t *testing.T) {
 
 	const expected = `update "event" set "key" = $1, "key_params" = $2, "payload" = $3, "description" = $4, "importance" = $5, "origin" = $6, "entities" = ARRAY[$7, $8]::text[], "other_references" = ARRAY[]::text[], "actors" = ARRAY[$9]::text[], "tags" = ARRAY[]::text[] where "id" = $10 returning "updated";`
 
-	e := eventhub.NewEvent(
+	e := straumur.NewEvent(
 		"foo.bar",
 		nil,
 		nil,

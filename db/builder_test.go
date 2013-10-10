@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"testing"
 	"time"
 )
@@ -24,7 +24,7 @@ func TestQueryBuilder(t *testing.T) {
 
 	expectedArgs := []interface{}{"foo.bar", "bar.foo", "mysystem", "c/1", "c/2"}
 
-	q := eventhub.Query{}
+	q := straumur.Query{}
 	q.Origin = "mysystem"
 	q.Entities = []string{"c/1", "c/2"}
 	q.Key = "foo.bar OR bar.foo"
@@ -44,7 +44,7 @@ func TestDateRangeBuilder(t *testing.T) {
 
 	const expected = `select * from event where key in ($1) and created >= $2 and created < $3 order by created desc;`
 
-	q := eventhub.Query{}
+	q := straumur.Query{}
 	q.Key = "somekey"
 	q.From = time.Date(2013, time.September, 20, 9, 1, 45, 0, time.UTC)
 	q.To = time.Date(2013, time.September, 20, 9, 1, 47, 0, time.UTC)

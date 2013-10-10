@@ -3,7 +3,7 @@ package ws
 import (
 	"code.google.com/p/go.net/websocket"
 	"fmt"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -20,7 +20,7 @@ func newConfig(t *testing.T, path string) *websocket.Config {
 
 func eventServer(ws *websocket.Conn) {
 	for {
-		var event eventhub.Event
+		var event straumur.Event
 		err := websocket.JSON.Receive(ws, &event)
 		if err != nil {
 			return
@@ -50,7 +50,7 @@ func TestSimpleEcho(t *testing.T) {
 		return
 	}
 
-	var event eventhub.Event
+	var event straumur.Event
 	event.Description = "hello"
 	if err := websocket.JSON.Send(conn, event); err != nil {
 		t.Errorf("Write: %v", err)

@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"testing"
 )
 
@@ -11,7 +11,7 @@ func TestAggregateBuilder(t *testing.T) {
 
 	expectedArgs := []interface{}{"foo.bar", "bar.foo", "mysystem", "c/1", "c/2"}
 
-	q := eventhub.Query{}
+	q := straumur.Query{}
 	q.Origin = "mysystem"
 	q.Entities = []string{"c/1", "c/2"}
 	q.Key = "foo.bar OR bar.foo"

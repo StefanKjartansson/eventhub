@@ -1,4 +1,4 @@
-package eventhub
+package straumur
 
 type merge struct {
 	feeds   []EventFeed

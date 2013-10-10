@@ -3,7 +3,7 @@ package amqpfeed
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"github.com/streadway/amqp"
 )
 
@@ -12,7 +12,7 @@ type Consumer struct {
 	channel *amqp.Channel
 	tag     string
 	done    chan error
-	events  chan eventhub.Event
+	events  chan straumur.Event
 }
 
 func NewConsumer(amqpURI, exchange, exchangeType, queueName, key, ctag string, durable, auto_delete bool) (*Consumer, error) {
@@ -22,7 +22,7 @@ func NewConsumer(amqpURI, exchange, exchangeType, queueName, key, ctag string, d
 		channel: nil,
 		tag:     ctag,
 		done:    make(chan error),
-		events:  make(chan eventhub.Event),
+		events:  make(chan straumur.Event),
 	}
 
 	var err error
@@ -104,14 +104,14 @@ func (c *Consumer) Close() error {
 	return <-c.done
 }
 
-func (c *Consumer) Updates() <-chan eventhub.Event {
+func (c *Consumer) Updates() <-chan straumur.Event {
 	return c.events
 }
 
 func (c *Consumer) handle(deliveries <-chan amqp.Delivery, done chan error) {
 	for d := range deliveries {
 		decoder := json.NewDecoder(bytes.NewReader(d.Body))
-		var e eventhub.Event
+		var e straumur.Event
 		err := decoder.Decode(&e)
 		if err != nil {
 			done <- err

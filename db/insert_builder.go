@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	_ "github.com/lib/pq"
 	"time"
 )
@@ -50,7 +50,7 @@ func writeArrayParams(buffer *bytes.Buffer, arrays [][]string, startParam int, k
 	return paramCount
 }
 
-func getBaseArgs(e *eventhub.Event, isUpdate bool) ([]interface{}, error) {
+func getBaseArgs(e *straumur.Event, isUpdate bool) ([]interface{}, error) {
 
 	//todo, check if e.Payload/e.KeyParams is string and valid json
 	payload, err := json.Marshal(e.Payload)
@@ -95,7 +95,7 @@ func getBaseArgs(e *eventhub.Event, isUpdate bool) ([]interface{}, error) {
 }
 
 // Builds an insert query for the event table
-func buildInsertQuery(e *eventhub.Event) (string, []interface{}, error) {
+func buildInsertQuery(e *straumur.Event) (string, []interface{}, error) {
 
 	var buffer bytes.Buffer
 	columnList := []string{
@@ -151,7 +151,7 @@ func buildInsertQuery(e *eventhub.Event) (string, []interface{}, error) {
 }
 
 // Builds an update query for the event table
-func buildUpdateQuery(e *eventhub.Event) (string, []interface{}, error) {
+func buildUpdateQuery(e *straumur.Event) (string, []interface{}, error) {
 
 	//Partial updates?
 

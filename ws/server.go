@@ -2,14 +2,14 @@ package ws
 
 import (
 	"code.google.com/p/go.net/websocket"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"log"
 	"net/http"
 )
 
 type Server struct {
 	pattern string
-	feed    eventhub.EventFeed
+	feed    straumur.EventFeed
 	clients map[int]*Client
 	addCh   chan *Client
 	delCh   chan *Client
@@ -18,7 +18,7 @@ type Server struct {
 }
 
 // Create a new Websocket broadcaster
-func NewServer(pattern string, feed eventhub.EventFeed) *Server {
+func NewServer(pattern string, feed straumur.EventFeed) *Server {
 	clients := make(map[int]*Client)
 	addCh := make(chan *Client)
 	delCh := make(chan *Client)
@@ -52,7 +52,7 @@ func (s *Server) Err(err error) {
 	s.errCh <- err
 }
 
-func (s *Server) sendAll(event *eventhub.Event) {
+func (s *Server) sendAll(event *straumur.Event) {
 	for _, c := range s.clients {
 		log.Printf("%+v", c.query)
 		if c.query.Match(*event) {

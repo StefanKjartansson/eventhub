@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"github.com/google/go-querystring/query"
 	"log"
 	"net/http"
@@ -15,16 +15,16 @@ import (
 var serverAddr string
 var once sync.Once
 var client *http.Client
-var firstEvent *eventhub.Event
-var secondEvent *eventhub.Event
+var firstEvent *straumur.Event
+var secondEvent *straumur.Event
 var errChan chan error
 
 func startServer() {
 
 	errChan = make(chan error)
-	d := eventhub.NewLocalMemoryStore()
+	d := straumur.NewLocalMemoryStore()
 
-	firstEvent = eventhub.NewEvent(
+	firstEvent = straumur.NewEvent(
 		"myapp.user.login",
 		nil,
 		nil,
@@ -36,7 +36,7 @@ func startServer() {
 		[]string{"actor1", "actor2"},
 		nil)
 
-	secondEvent = eventhub.NewEvent(
+	secondEvent = straumur.NewEvent(
 		"myapp.user.logout",
 		nil,
 		nil,
@@ -148,7 +148,7 @@ func TestGetByEntity(t *testing.T) {
 
 	url := fmt.Sprintf("http://%s/user/foo/", serverAddr)
 	t.Log(url)
-	events := []eventhub.Event{}
+	events := []straumur.Event{}
 	getJSON(t, url, &events)
 	log.Printf("%v", events)
 }
@@ -159,7 +159,7 @@ func TestGetById(t *testing.T) {
 
 	url := fmt.Sprintf("http://%s/1/", serverAddr)
 	t.Log(url)
-	event := eventhub.Event{}
+	event := straumur.Event{}
 	getJSON(t, url, &event)
 	log.Printf("%v", event)
 }
@@ -168,7 +168,7 @@ func TestPostNewEvent(t *testing.T) {
 	log.Println("TestPostNewEvent")
 	once.Do(startServer)
 
-	e := eventhub.Event{
+	e := straumur.Event{
 		Key:         "myapp.user.delete",
 		Description: "User foobar deleted",
 		Importance:  3,
@@ -202,15 +202,15 @@ func TestSearch(t *testing.T) {
 	once.Do(startServer)
 
 	tests := []struct {
-		Q      eventhub.Query
+		Q      straumur.Query
 		Status int
 	}{{
-		Q: eventhub.Query{
+		Q: straumur.Query{
 			Key: "myapp.user.login",
 		},
 		Status: http.StatusOK,
 	}, {
-		Q: eventhub.Query{
+		Q: straumur.Query{
 			Key: "myapp.user.login OR myapp.user.logout",
 		},
 		Status: http.StatusOK,
@@ -223,11 +223,11 @@ func TestSearch(t *testing.T) {
 		}
 		url := fmt.Sprintf("http://%s/search?%s", serverAddr, v.Encode())
 		log.Println(url)
-		results := []eventhub.Event{}
+		results := []straumur.Event{}
 		getJSON(t, url, &results)
 	}
 
-	q := eventhub.Query{
+	q := straumur.Query{
 		Key: "myapp.user.login OR myapp.user.logout",
 	}
 	v, err := query.Values(q)
@@ -236,14 +236,14 @@ func TestSearch(t *testing.T) {
 	}
 
 	url := fmt.Sprintf("http://%s/user/foo/?%s", serverAddr, v.Encode())
-	results := []eventhub.Event{}
+	results := []straumur.Event{}
 	getJSON(t, url, &results)
 
 }
 
 func TestAggregateType(t *testing.T) {
 	once.Do(startServer)
-	q := eventhub.Query{
+	q := straumur.Query{
 		Key: "myapp.user.login OR myapp.user.logout",
 	}
 	v, err := query.Values(q)
@@ -268,7 +268,7 @@ func TestAggregateType(t *testing.T) {
 func TestImportanceFilter(t *testing.T) {
 
 	//Tests entity + filter
-	q := eventhub.Query{
+	q := straumur.Query{
 		Importance: "lt3",
 	}
 	v, err := query.Values(q)
@@ -277,7 +277,7 @@ func TestImportanceFilter(t *testing.T) {
 	}
 	url := fmt.Sprintf("http://%s/user/foo/?%s&from=01.01.1994", serverAddr, v.Encode())
 	log.Println(url)
-	results := []eventhub.Event{}
+	results := []straumur.Event{}
 	getJSON(t, url, &results)
 
 	if len(results) != 1 {

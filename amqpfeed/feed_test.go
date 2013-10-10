@@ -2,7 +2,7 @@ package amqpfeed
 
 import (
 	"encoding/json"
-	"github.com/StefanKjartansson/eventhub"
+	"github.com/straumur/straumur"
 	"github.com/streadway/amqp"
 	"log"
 	"testing"
@@ -18,7 +18,7 @@ const (
 	lifetime     = 0
 )
 
-func publish(amqpURI, exchange, exchangeType, routingKey string, event *eventhub.Event, reliable, durable, auto_delete bool) error {
+func publish(amqpURI, exchange, exchangeType, routingKey string, event *straumur.Event, reliable, durable, auto_delete bool) error {
 
 	b, err := json.Marshal(event)
 	if err != nil {
@@ -99,7 +99,7 @@ func TestAMQPFeed(t *testing.T) {
 
 	t.Logf("%v", c)
 
-	e := eventhub.NewEvent(
+	e := straumur.NewEvent(
 		"foo.bar",
 		nil,
 		nil,

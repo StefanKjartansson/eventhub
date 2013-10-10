@@ -1,13 +1,13 @@
 all: test
 
 test:
-	go test -i github.com/StefanKjartansson/eventhub
-	go test -i github.com/StefanKjartansson/eventhub/db
-	go test -i github.com/StefanKjartansson/eventhub/rest
-	go test -i github.com/StefanKjartansson/eventhub/amqpfeed
-	go test -i github.com/StefanKjartansson/eventhub/ws
-	go test github.com/StefanKjartansson/eventhub
-	go test github.com/StefanKjartansson/eventhub/db
-	go test github.com/StefanKjartansson/eventhub/rest
-	go test github.com/StefanKjartansson/eventhub/amqpfeed
-	go test github.com/StefanKjartansson/eventhub/ws
+	go test -i github.com/straumur/straumur
+	go test -i github.com/straumur/straumur/db
+	go test -i github.com/straumur/straumur/rest
+	go test -i github.com/straumur/straumur/amqpfeed
+	go test -i github.com/straumur/straumur/ws
+	go test github.com/straumur/straumur
+	go test github.com/straumur/straumur/db
+	go test github.com/straumur/straumur/rest
+	go test github.com/straumur/straumur/amqpfeed
+	go test github.com/straumur/straumur/ws
