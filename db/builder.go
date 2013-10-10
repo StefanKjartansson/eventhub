@@ -34,7 +34,7 @@ func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
 
 	//Early exit, query is empty
 	if q.IsEmpty() {
-		buffer.WriteString(" order by updated desc;")
+		buffer.WriteString(" order by created desc;")
 		return buffer.String(), args
 	}
 
@@ -105,7 +105,7 @@ func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
 	}
 
 	//todo add sort to query
-	buffer.WriteString(" order by updated desc;")
+	buffer.WriteString(" order by created desc;")
 
 	return buffer.String(), args
 }

@@ -20,7 +20,7 @@ func TestWriteArray(t *testing.T) {
 
 func TestQueryBuilder(t *testing.T) {
 
-	const expected = `select * from event where key in ($1, $2) and origin = $3 and entities @> ARRAY[$4, $5]::text[] order by updated desc;`
+	const expected = `select * from event where key in ($1, $2) and origin = $3 and entities @> ARRAY[$4, $5]::text[] order by created desc;`
 
 	expectedArgs := []interface{}{"foo.bar", "bar.foo", "mysystem", "c/1", "c/2"}
 
@@ -42,7 +42,7 @@ func TestQueryBuilder(t *testing.T) {
 
 func TestDateRangeBuilder(t *testing.T) {
 
-	const expected = `select * from event where key in ($1) and created >= $2 and created < $3 order by updated desc;`
+	const expected = `select * from event where key in ($1) and created >= $2 and created < $3 order by created desc;`
 
 	q := eventhub.Query{}
 	q.Key = "somekey"

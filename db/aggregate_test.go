@@ -7,7 +7,7 @@ import (
 
 func TestAggregateBuilder(t *testing.T) {
 
-	const expected = `select i as name, count(*) as count from (select unnest(actors) as i from (select * from event where key in ($1, $2) and origin = $3 and entities @> ARRAY[$4, $5]::text[] order by updated desc) x order by actors) t group by i order by i;`
+	const expected = `select i as name, count(*) as count from (select unnest(actors) as i from (select * from event where key in ($1, $2) and origin = $3 and entities @> ARRAY[$4, $5]::text[] order by created desc) x order by actors) t group by i order by i;`
 
 	expectedArgs := []interface{}{"foo.bar", "bar.foo", "mysystem", "c/1", "c/2"}
 
