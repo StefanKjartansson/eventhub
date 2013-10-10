@@ -4,6 +4,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
@@ -66,13 +67,15 @@ func orMatchStringAny(q, e string) bool {
 //TODO: Importance, 1+OR+3 gt1 lt4. single param
 //TODO: Sort & direction
 type Query struct {
-	Origin          string   `url:"origin,omitempty" schema:"origin" json:"origin"`
-	Key             string   `url:"key,omitempty" schema:"key" json:"key"`
-	Entities        []string `url:"entities,omitempty" schema:"entities" json:"entities"`
-	OtherReferences []string `url:"other_references,omitempty" schema:"other_references" json:"other_references"`
-	Actors          []string `url:"actors,omitempty" schema:"actors" json:"actors"`
-	Tags            []string `url:"tags,omitempty" schema:"tags" json:"tags"`
-	Importance      string   `url:"importance,omitempty" schema:"importance" json:"importance"`
+	Origin          string    `url:"origin,omitempty" schema:"origin" json:"origin"`
+	Key             string    `url:"key,omitempty" schema:"key" json:"key"`
+	Entities        []string  `url:"entities,omitempty" schema:"entities" json:"entities"`
+	OtherReferences []string  `url:"other_references,omitempty" schema:"other_references" json:"other_references"`
+	Actors          []string  `url:"actors,omitempty" schema:"actors" json:"actors"`
+	Tags            []string  `url:"tags,omitempty" schema:"tags" json:"tags"`
+	Importance      string    `url:"importance,omitempty" schema:"importance" json:"importance"`
+	From            time.Time `url:"from,omitempty" schema:"from" json:"from"`
+	To              time.Time `url:"to,omitempty" schema:"to" json:"to"`
 }
 
 // Return true if s is a valid array type
@@ -93,6 +96,15 @@ func (q *Query) IsEmpty() bool {
 			return false
 		}
 	}
+
+	if !q.From.IsZero() {
+		return false
+	}
+
+	if !q.To.IsZero() {
+		return false
+	}
+
 	return true
 
 }
@@ -159,5 +171,17 @@ func (q *Query) Match(e Event) bool {
 		}
 	}
 
-	return q.matchImportance(e.Importance)
+	if !q.matchImportance(e.Importance) {
+		return false
+	}
+
+	if !q.From.IsZero() && e.Created.UnixNano() < q.From.UnixNano() {
+		return false
+	}
+
+	if !q.To.IsZero() && e.Created.UnixNano() > q.To.UnixNano() {
+		return false
+	}
+
+	return true
 }
