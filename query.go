@@ -175,11 +175,11 @@ func (q *Query) Match(e Event) bool {
 		return false
 	}
 
-	if !q.From.IsZero() && e.Created.UnixNano() < q.From.UnixNano() {
+	if !q.From.IsZero() && e.Created.Before(q.From) {
 		return false
 	}
 
-	if !q.To.IsZero() && e.Created.UnixNano() > q.To.UnixNano() {
+	if !q.To.IsZero() && e.Created.After(q.To) {
 		return false
 	}
 
