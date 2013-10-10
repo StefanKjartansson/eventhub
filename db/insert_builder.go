@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/StefanKjartansson/eventhub"
 	_ "github.com/lib/pq"
+	"time"
 )
 
 func writeArrayParams(buffer *bytes.Buffer, arrays [][]string, startParam int, keys []string) int {
@@ -49,7 +50,7 @@ func writeArrayParams(buffer *bytes.Buffer, arrays [][]string, startParam int, k
 	return paramCount
 }
 
-func getBaseArgs(e *eventhub.Event) ([]interface{}, error) {
+func getBaseArgs(e *eventhub.Event, isUpdate bool) ([]interface{}, error) {
 
 	//todo, check if e.Payload/e.KeyParams is string and valid json
 	payload, err := json.Marshal(e.Payload)
@@ -62,9 +63,29 @@ func getBaseArgs(e *eventhub.Event) ([]interface{}, error) {
 		return nil, err
 	}
 
+	if isUpdate {
+
+		return []interface{}{
+			e.Key,
+			keyparams,
+			payload,
+			e.Description,
+			e.Importance,
+			e.Origin,
+		}, nil
+
+	}
+	t := time.Now()
+	if e.Created.IsZero() {
+		e.Created = t
+	}
+	e.Updated = t
+
 	return []interface{}{
 		e.Key,
 		keyparams,
+		e.Created,
+		e.Updated,
 		payload,
 		e.Description,
 		e.Importance,
@@ -92,7 +113,7 @@ func buildInsertQuery(e *eventhub.Event) (string, []interface{}, error) {
 		"tags",
 	}
 
-	args, err := getBaseArgs(e)
+	args, err := getBaseArgs(e, false)
 	if err != nil {
 		return "", nil, nil
 	}
@@ -105,7 +126,7 @@ func buildInsertQuery(e *eventhub.Event) (string, []interface{}, error) {
 		}
 	}
 	buffer.WriteString(") values (")
-	buffer.WriteString("$1, $2, now(), now(), $3, $4, $5, $6, ")
+	buffer.WriteString("$1, $2, $3, $4, $5, $6, $7, $8,")
 
 	writeArrayParams(
 		&buffer,
@@ -115,8 +136,9 @@ func buildInsertQuery(e *eventhub.Event) (string, []interface{}, error) {
 			e.Actors,
 			e.Tags,
 		},
-		7,
+		len(args)+1,
 		nil)
+
 	buffer.WriteString(`) returning "id", "created", "updated";`)
 
 	for _, arr := range [][]string{e.Entities, e.OtherReferences, e.Actors, e.Tags} {
@@ -144,7 +166,8 @@ func buildUpdateQuery(e *eventhub.Event) (string, []interface{}, error) {
 		"origin",
 	}
 
-	args, err := getBaseArgs(e)
+	args, err := getBaseArgs(e, true)
+
 	if err != nil {
 		return "", nil, nil
 	}

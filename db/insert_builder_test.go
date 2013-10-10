@@ -13,9 +13,21 @@ func queryTest(t *testing.T, expected string, e *eventhub.Event, qb QueryBuilder
 		e.Key,
 		"{}",
 		"{}",
+		e.Created,
+		e.Updated,
 		e.Description,
 		e.Importance,
 		e.Origin,
+	}
+	if e.ID > 0 {
+		expectedArgs = []interface{}{
+			e.Key,
+			"{}",
+			"{}",
+			e.Description,
+			e.Importance,
+			e.Origin,
+		}
 	}
 
 	for _, i := range [][]string{e.Entities, e.OtherReferences, e.Actors, e.Tags} {
@@ -48,7 +60,7 @@ func queryTest(t *testing.T, expected string, e *eventhub.Event, qb QueryBuilder
 
 func TestBuildInsertQuery(t *testing.T) {
 
-	const expected = `insert into "event" ("key", "key_params", "created", "updated", "payload", "description", "importance", "origin", "entities", "other_references", "actors", "tags") values ($1, $2, now(), now(), $3, $4, $5, $6, ARRAY[$7, $8]::text[], ARRAY[]::text[], ARRAY[$9]::text[], ARRAY[]::text[]) returning "id", "created", "updated";`
+	const expected = `insert into "event" ("key", "key_params", "created", "updated", "payload", "description", "importance", "origin", "entities", "other_references", "actors", "tags") values ($1, $2, $3, $4, $5, $6, $7, $8,ARRAY[$9, $10]::text[], ARRAY[]::text[], ARRAY[$11]::text[], ARRAY[]::text[]) returning "id", "created", "updated";`
 
 	e := eventhub.NewEvent(
 		"foo.bar",
