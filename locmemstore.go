@@ -56,7 +56,9 @@ func (d *LocalMemoryStore) Save(e *Event) error {
 	} else {
 		e.ID = len(d.evs) + 1
 		t := time.Now()
-		e.Created = t
+		if e.Created.IsZero() {
+			e.Created = t
+		}
 		e.Updated = t
 		d.evs = append(d.evs, *e)
 	}
