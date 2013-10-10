@@ -1,23 +1,24 @@
 package rest
 
 //TODO: Better use of errchan
-
 import (
 	"encoding/json"
 	"errors"
-	"github.com/straumur/straumur"
+	"github.com/golang/glog"
 	"github.com/gorilla/mux"
+	"github.com/straumur/straumur"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
 	ErrSaveExisting      = errors.New("Save existing resource")
 	ErrUpdateNonExisting = errors.New("Update non-existing resource")
 	ErrMissingType       = errors.New("Missing type param")
+	ErrInvalidEntity     = errors.New("Invalid entity")
 )
 
 type RESTService struct {
@@ -31,14 +32,11 @@ type RESTService struct {
 func getEntity(req *http.Request) (string, error) {
 	vars := mux.Vars(req)
 	entity := vars["entity"]
-	if entity == "" {
-		return "", errors.New("Entity can't be empty")
-	}
 	id := vars["id"]
-	if id == "" {
-		return "", errors.New("Id can't be empty")
+	if id == "" || entity == "" {
+		return "", ErrInvalidEntity
 	}
-	return strings.Join([]string{entity, id}, "/"), nil
+	return entity + "/" + id, nil
 }
 
 // Parses a Query from the request
@@ -65,9 +63,13 @@ func handlerWrapper(f func(http.ResponseWriter, *http.Request) (error, int)) htt
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
 
+		t := time.Now()
 		err, status := f(w, r)
+
+		glog.V(2).Infof("Processed request: %s:%s in %f", r.Method, r.URL, time.Now().Sub(t).Seconds())
+
 		if err != nil {
-			log.Println(err.Error())
+			glog.Warningf("Error - [%s]%s, status: %d", r.Method, r.URL, status)
 			http.Error(w, err.Error(), status)
 		}
 	}
@@ -186,6 +188,7 @@ func (r *RESTService) getRouter() (*mux.Router, error) {
 	return router, nil
 }
 
+// Creates a new REST dataservice
 func NewRESTService(prefix string, address string) *RESTService {
 	return &RESTService{
 		prefix:  strings.TrimRight(prefix, "/"),
@@ -207,6 +210,9 @@ func (r *RESTService) Run(d straumur.DataBackend, ec chan error) {
 	http.Handle(r.prefix+"/", router)
 
 	err = http.ListenAndServe(r.address, nil)
+
+	glog.V(2).Info("Server started")
+
 	if err != nil {
 		ec <- err
 	}
