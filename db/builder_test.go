@@ -3,6 +3,7 @@ package db
 import (
 	"github.com/StefanKjartansson/eventhub"
 	"testing"
+	"time"
 )
 
 func TestWriteArray(t *testing.T) {
@@ -27,6 +28,28 @@ func TestQueryBuilder(t *testing.T) {
 	q.Origin = "mysystem"
 	q.Entities = []string{"c/1", "c/2"}
 	q.Key = "foo.bar OR bar.foo"
+
+	s, args := buildSelectQuery(q)
+
+	if s != expected {
+		t.Fatalf("Expected %s, got %s", expected, s)
+	}
+
+	if len(args) != len(expectedArgs) {
+		t.Fatalf("Expected %+v, got %+v", expectedArgs, args)
+	}
+}
+
+func TestDateRangeBuilder(t *testing.T) {
+
+	const expected = `select * from event where key in ($1) and created >= $2 and created < $3 order by updated desc;`
+
+	q := eventhub.Query{}
+	q.Key = "somekey"
+	q.From = time.Date(2013, time.September, 20, 9, 1, 45, 0, time.UTC)
+	q.To = time.Date(2013, time.September, 20, 9, 1, 47, 0, time.UTC)
+
+	expectedArgs := []interface{}{q.Key, q.From, q.To}
 
 	s, args := buildSelectQuery(q)
 

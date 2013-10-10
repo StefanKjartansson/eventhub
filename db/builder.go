@@ -65,6 +65,26 @@ func buildSelectQuery(q eventhub.Query) (string, []interface{}) {
 		writeDelimiter = true
 	}
 
+	if !q.From.IsZero() {
+		if writeDelimiter {
+			buffer.WriteString(delimiter)
+		}
+		buffer.WriteString(fmt.Sprintf("created >= $%d", paramCount))
+		args = append(args, q.From)
+		paramCount++
+		writeDelimiter = true
+	}
+
+	if !q.To.IsZero() {
+		if writeDelimiter {
+			buffer.WriteString(delimiter)
+		}
+		buffer.WriteString(fmt.Sprintf("created < $%d", paramCount))
+		args = append(args, q.To)
+		paramCount++
+		writeDelimiter = true
+	}
+
 	//Array fields
 	array_fields := make(map[string][]string)
 	array_fields["entities"] = q.Entities
