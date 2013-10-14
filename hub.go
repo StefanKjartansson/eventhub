@@ -1,7 +1,6 @@
 package straumur
 
 import (
-	"log"
 	"sync"
 )
 
@@ -14,6 +13,7 @@ type hub struct {
 	dataservices []DataService
 	errs         chan error
 	quit         chan struct{}
+	processors   map[string]*processorList
 }
 
 func NewHub(application string, d DataBackend) *hub {
@@ -22,7 +22,17 @@ func NewHub(application string, d DataBackend) *hub {
 		db:          d,
 		errs:        make(chan error),
 		quit:        make(chan struct{}),
+		processors:  make(map[string]*processorList),
 	}
+}
+
+func (h *hub) RegisterProcessor(step, pattern string, f Processor) error {
+	pl, ok := h.processors[step]
+	if !ok {
+		pl = NewProcessorList()
+		h.processors[step] = pl
+	}
+	return pl.Register(pattern, f)
 }
 
 func (h *hub) AddFeeds(efs ...EventFeed) {
@@ -55,6 +65,10 @@ func (h *hub) Run() {
 		var e *Event
 		select {
 		case e = <-merged.Updates():
+			pl, ok := h.processors["pre"]
+			if ok {
+				h.errs <- pl.Process(e)
+			}
 			err := h.db.Save(e)
 			if err != nil {
 				h.errs <- err
@@ -62,18 +76,16 @@ func (h *hub) Run() {
 			for _, b := range h.broadcasters {
 				go b.Broadcast(e)
 			}
-		case err := <-h.errs:
-			log.Fatal(err)
-			return
+
 		case <-h.quit:
 			h.errs <- merged.Close()
 			return
 		}
 	}
 
+	return
 }
 
-func (h *hub) Close() error {
+func (h *hub) Close() {
 	close(h.quit)
-	return <-h.errs
 }

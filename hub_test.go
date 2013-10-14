@@ -1,6 +1,7 @@
 package straumur
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -38,23 +39,7 @@ func (f FakeDataService) Run(d DataBackend, ec chan error) {
 	}
 }
 
-func TestHub(t *testing.T) {
-
-	d := NewLocalMemoryStore()
-	h := NewHub("Application", d)
-
-	f1 := DummyFeed{make(chan *Event)}
-	f2 := DummyFeed{make(chan *Event)}
-
-	h.AddFeeds(f1, f2)
-
-	b := FakeBroadCaster{make(chan *Event)}
-	h.AddBroadcasters(b)
-
-	fds := FakeDataService{}
-	h.AddDataServices(fds)
-
-	count := 5
+func Ticker(count int, efs ...DummyFeed) <-chan struct{} {
 	ticker := time.NewTicker(1 * time.Millisecond)
 	quit := make(chan struct{})
 	go func() {
@@ -73,29 +58,75 @@ func TestHub(t *testing.T) {
 					nil,
 					nil)
 
-				t.Logf("Sending %+v to feed, count: %d", e, count)
-
-				e.Description = "from feed 1"
-				f1.events <- e
-				e.Description = "from feed 2"
-				f2.events <- e
+				for idx, f := range efs {
+					e.Description = fmt.Sprintf("from feed %d", idx+1)
+					f.events <- e
+				}
 				count--
-
 				if count < 0 {
 					close(quit)
 				}
 			case <-quit:
-				t.Logf("Closing ticker")
 				ticker.Stop()
 				return
 			}
 		}
 	}()
+	return quit
+}
+
+func TestHub(t *testing.T) {
+
+	t.Skip()
+	d := NewLocalMemoryStore()
+	h := NewHub("Application", d)
+
+	f1 := DummyFeed{make(chan *Event)}
+	f2 := DummyFeed{make(chan *Event)}
+
+	h.AddFeeds(f1, f2)
+
+	b := FakeBroadCaster{make(chan *Event)}
+	h.AddBroadcasters(b)
+
+	fds := FakeDataService{}
+	h.AddDataServices(fds)
+
+	wait := Ticker(5, f1, f2)
 
 	go h.Run()
 
+	<-wait
+
 	for i := 0; i < 12; i++ {
 		t.Logf("Broadcast: %+v", <-b.events)
+	}
+
+}
+
+func TestErrClose(t *testing.T) {
+
+	ErrSome := errors.New("some error")
+	d := NewLocalMemoryStore()
+	h := NewHub("Application", d)
+	f1 := DummyFeed{make(chan *Event)}
+	h.AddFeeds(f1)
+
+	h.RegisterProcessor("pre", "myapp*", func(e *Event) error {
+		return ErrSome
+	})
+
+	wait := Ticker(1, f1)
+
+	go h.Run()
+
+	<-wait
+
+	h.Close()
+
+	err := <-h.errs
+	if err != ErrSome {
+		t.Fatalf("Expected ErrSome, got %+v", err)
 	}
 
 }
