@@ -7,8 +7,9 @@ func TestProcessorList(t *testing.T) {
 	const tag = "foo"
 
 	pl := NewProcessorList()
-	pl.Register("app.user*", func(e *Event, errchan chan error) {
+	pl.Register("app.user*", func(e *Event) error {
 		e.Tags = append(e.Tags, tag)
+		return nil
 	})
 
 	e := NewEvent(
@@ -23,9 +24,7 @@ func TestProcessorList(t *testing.T) {
 		nil,
 		nil)
 
-	errs := make(chan error)
-
-	pl.Process(e, errs)
+	_ = pl.Process(e)
 
 	if !stringInSlice(tag, e.Tags) {
 		t.Fatalf("%s should be in %+v", tag, e.Tags)

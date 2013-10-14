@@ -7,7 +7,7 @@ import (
 
 // Processor is a function which modifies the contents
 // of the event and emits any errors to the error channel
-type Processor func(*Event, chan error)
+type Processor func(*Event) error
 
 // processorRoute is a struct containing a regular expression
 // used to determine whether a received event is of interest
@@ -38,12 +38,16 @@ func (p *processorList) Register(pattern string, f Processor) error {
 }
 
 // Applies the Processor functions in the order they were registered.
-func (p *processorList) Process(e *Event, errchan chan error) {
+func (p *processorList) Process(e *Event) (err error) {
 	for x := p.inner.Front(); x != nil; x = x.Next() {
 		// asProcessor, ok := maybe?
 		asProcessor := x.Value.(processorRoute)
 		if asProcessor.match.MatchString(e.Key) {
-			asProcessor.f(e, errchan)
+			err = asProcessor.f(e)
+			if err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
