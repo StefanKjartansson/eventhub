@@ -1,11 +1,12 @@
 language: go
-go: 1.1
+
+go:
+ - 1.1
+ - tip
 
 install:
- - go get github.com/gorilla/mux
  - go get github.com/gorilla/schema
  - go get github.com/google/go-querystring/query
- - go get code.google.com/p/go.net/websocket
 
 script:
- - make
+ - go test
