@@ -14,25 +14,12 @@ import (
 
 var serverAddr string
 var once sync.Once
-
-var d DummyFeed
-
-type DummyFeed struct {
-	events chan *straumur.Event
-}
-
-func (d *DummyFeed) Updates() <-chan *straumur.Event {
-	return d.events
-}
-
-func (d *DummyFeed) Close() error {
-	return nil
-}
+var broadcaster straumur.Broadcaster
 
 func startServer() {
-	d = DummyFeed{make(chan *straumur.Event)}
-	s := NewServer("/ws", &d)
-	go s.Listen()
+	broadcaster = NewServer("/ws")
+	errCh := make(chan error)
+	go broadcaster.Run(errCh)
 	server := httptest.NewServer(nil)
 	serverAddr = server.Listener.Addr().String()
 }
@@ -65,7 +52,7 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		nil,
 		nil)
 
-	d.events <- e
+	broadcaster.Broadcast(e)
 
 	var event straumur.Event
 	if err := websocket.JSON.Receive(conn, &event); err != nil {
@@ -91,9 +78,9 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		t.Errorf("Query %+v should not pass %+v", q, filtered)
 	}
 
-	d.events <- filtered
+	broadcaster.Broadcast(filtered)
 
-	d.events <- straumur.NewEvent(
+	broadcaster.Broadcast(straumur.NewEvent(
 		"foo.bar",
 		nil,
 		nil,
@@ -103,7 +90,7 @@ func TestWebSocketBroadcaster(t *testing.T) {
 		[]string{"ns/foo", "ns/moo"},
 		nil,
 		nil,
-		nil)
+		nil))
 
 	ev := <-incoming
 

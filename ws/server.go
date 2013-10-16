@@ -9,7 +9,7 @@ import (
 
 type Server struct {
 	pattern string
-	feed    straumur.EventFeed
+	events  chan *straumur.Event
 	clients map[int]*Client
 	addCh   chan *Client
 	delCh   chan *Client
@@ -18,16 +18,18 @@ type Server struct {
 }
 
 // Create a new Websocket broadcaster
-func NewServer(pattern string, feed straumur.EventFeed) *Server {
+func NewServer(pattern string) *Server {
+
 	clients := make(map[int]*Client)
 	addCh := make(chan *Client)
 	delCh := make(chan *Client)
 	doneCh := make(chan bool)
 	errCh := make(chan error)
+	events := make(chan *straumur.Event)
 
 	return &Server{
 		pattern,
-		feed,
+		events,
 		clients,
 		addCh,
 		delCh,
@@ -61,7 +63,11 @@ func (s *Server) sendAll(event *straumur.Event) {
 	}
 }
 
-func (s *Server) Listen() {
+func (s *Server) Broadcast(e *straumur.Event) {
+	s.events <- e
+}
+
+func (s *Server) Run(ec chan error) {
 
 	// websocket handler
 	onConnected := func(ws *websocket.Conn) {
@@ -95,12 +101,13 @@ func (s *Server) Listen() {
 			delete(s.clients, c.id)
 
 		// consume event feed
-		case event := <-s.feed.Updates():
+		case event := <-s.events:
 			log.Println("Send all:", event)
 			s.sendAll(event)
 
 		case err := <-s.errCh:
 			log.Println("Error:", err.Error())
+			ec <- err
 
 		case <-s.doneCh:
 			return
