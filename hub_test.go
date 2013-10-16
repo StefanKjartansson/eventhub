@@ -79,7 +79,7 @@ func TestHub(t *testing.T) {
 
 	t.Skip()
 	d := NewLocalMemoryStore()
-	h := NewHub("Application", d)
+	h := NewHub(d)
 
 	f1 := DummyFeed{make(chan *Event)}
 	f2 := DummyFeed{make(chan *Event)}
@@ -108,7 +108,7 @@ func TestErrClose(t *testing.T) {
 
 	ErrSome := errors.New("some error")
 	d := NewLocalMemoryStore()
-	h := NewHub("Application", d)
+	h := NewHub(d)
 	f1 := DummyFeed{make(chan *Event)}
 	h.AddFeeds(f1)
 

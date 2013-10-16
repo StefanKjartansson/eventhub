@@ -1,12 +1,6 @@
 package straumur
 
-import (
-	"sync"
-)
-
 type hub struct {
-	application  string
-	m            sync.Mutex
 	feeds        []EventFeed
 	db           DataBackend
 	broadcasters []Broadcaster
@@ -16,13 +10,12 @@ type hub struct {
 	processors   map[string]*processorList
 }
 
-func NewHub(application string, d DataBackend) *hub {
+func NewHub(d DataBackend) *hub {
 	return &hub{
-		application: application,
-		db:          d,
-		errs:        make(chan error),
-		quit:        make(chan struct{}),
-		processors:  make(map[string]*processorList),
+		db:         d,
+		errs:       make(chan error),
+		quit:       make(chan struct{}),
+		processors: make(map[string]*processorList),
 	}
 }
 
@@ -36,16 +29,12 @@ func (h *hub) RegisterProcessor(step, pattern string, f Processor) error {
 }
 
 func (h *hub) AddFeeds(efs ...EventFeed) {
-	h.m.Lock()
-	defer h.m.Unlock()
 	for _, e := range efs {
 		h.feeds = append(h.feeds, e)
 	}
 }
 
 func (h *hub) AddBroadcasters(bcs ...Broadcaster) {
-	h.m.Lock()
-	defer h.m.Unlock()
 	for _, b := range bcs {
 		h.broadcasters = append(h.broadcasters, b)
 	}
