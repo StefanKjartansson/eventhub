@@ -28,6 +28,9 @@ func (f FakeBroadCaster) Broadcast(e *Event) {
 	f.events <- e
 }
 
+func (f FakeBroadCaster) Run(er chan error) {
+}
+
 type FakeDataService struct {
 	d DataBackend
 }

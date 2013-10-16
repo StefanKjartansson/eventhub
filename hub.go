@@ -37,6 +37,7 @@ func (h *hub) AddFeeds(efs ...EventFeed) {
 func (h *hub) AddBroadcasters(bcs ...Broadcaster) {
 	for _, b := range bcs {
 		h.broadcasters = append(h.broadcasters, b)
+		go b.Run(h.errs)
 	}
 }
 
