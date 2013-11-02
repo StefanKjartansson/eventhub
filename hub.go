@@ -1,5 +1,9 @@
 package straumur
 
+import (
+	"github.com/howbazaar/loggo"
+)
+
 type hub struct {
 	feeds        []EventFeed
 	db           DataBackend
@@ -9,6 +13,10 @@ type hub struct {
 	quit         chan struct{}
 	processors   map[string]*processorList
 }
+
+var (
+	logger = loggo.GetLogger("straumur.core")
+)
 
 func NewHub(d DataBackend) *hub {
 	return &hub{
@@ -25,7 +33,11 @@ func (h *hub) RegisterProcessor(step, pattern string, f Processor) error {
 		pl = NewProcessorList()
 		h.processors[step] = pl
 	}
-	return pl.Register(pattern, f)
+	err := pl.Register(pattern, f)
+	if err != nil {
+		logger.Errorf("Registering processor failed: %+v", err)
+	}
+	return err
 }
 
 func (h *hub) AddFeeds(efs ...EventFeed) {
@@ -77,5 +89,6 @@ func (h *hub) Run() {
 }
 
 func (h *hub) Close() {
+	logger.Infof("Closing hub")
 	close(h.quit)
 }

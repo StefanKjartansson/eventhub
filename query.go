@@ -1,7 +1,6 @@
 package straumur
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -118,7 +117,7 @@ func (q *Query) matchImportance(i int) bool {
 	val, err := strconv.Atoi(strings.TrimFunc(q.Importance, unicode.IsLetter))
 	if err != nil {
 		//maybe don't fatal
-		log.Fatal(err)
+		logger.Criticalf("%+v", err)
 		return false
 	}
 
