@@ -6,6 +6,7 @@ go:
 
 install:
  - go get github.com/gorilla/schema
+ - go get github.com/howbazaar/loggo
  - go get github.com/google/go-querystring/query
 
 script:
