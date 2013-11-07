@@ -144,8 +144,8 @@ func (q *Query) Match(e Event) bool {
 	}
 
 	orPairs := [][2]string{
-		[2]string{q.Origin, e.Origin},
-		[2]string{q.Key, e.Key},
+		{q.Origin, e.Origin},
+		{q.Key, e.Key},
 	}
 
 	for _, pair := range orPairs {
