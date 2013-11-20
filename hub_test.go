@@ -31,17 +31,6 @@ func (f FakeBroadCaster) Broadcast(e *Event) {
 func (f FakeBroadCaster) Run(er chan error) {
 }
 
-type FakeDataService struct {
-	d DataBackend
-}
-
-func (f FakeDataService) Run(d DataBackend, ec chan error) {
-	f.d = d
-	if f.d == nil {
-		ec <- fmt.Errorf("FakeDataService started with nil DataBackend")
-	}
-}
-
 func Ticker(count int, efs ...DummyFeed) <-chan struct{} {
 	ticker := time.NewTicker(1 * time.Millisecond)
 	quit := make(chan struct{})
@@ -92,9 +81,6 @@ func TestHub(t *testing.T) {
 	b := FakeBroadCaster{make(chan *Event)}
 	h.AddBroadcasters(b)
 
-	fds := FakeDataService{}
-	h.AddDataServices(fds)
-
 	wait := Ticker(5, f1, f2)
 
 	go h.Run()
@@ -127,7 +113,7 @@ func TestErrClose(t *testing.T) {
 
 	h.Close()
 
-	err := <-h.errs
+	err := <-h.Errs
 	if err != ErrSome {
 		t.Fatalf("Expected ErrSome, got %+v", err)
 	}

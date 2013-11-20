@@ -9,7 +9,7 @@ type hub struct {
 	db           DataBackend
 	broadcasters []Broadcaster
 	dataservices []DataService
-	errs         chan error
+	Errs         chan error
 	quit         chan struct{}
 	processors   map[string]*processorList
 }
@@ -21,7 +21,7 @@ var (
 func NewHub(d DataBackend) *hub {
 	return &hub{
 		db:         d,
-		errs:       make(chan error),
+		Errs:       make(chan error),
 		quit:       make(chan struct{}),
 		processors: make(map[string]*processorList),
 	}
@@ -49,13 +49,6 @@ func (h *hub) AddFeeds(efs ...EventFeed) {
 func (h *hub) AddBroadcasters(bcs ...Broadcaster) {
 	for _, b := range bcs {
 		h.broadcasters = append(h.broadcasters, b)
-		go b.Run(h.errs)
-	}
-}
-
-func (h *hub) AddDataServices(ds ...DataService) {
-	for _, d := range ds {
-		go d.Run(h.db, h.errs)
 	}
 }
 
@@ -69,18 +62,18 @@ func (h *hub) Run() {
 		case e = <-merged.Updates():
 			pl, ok := h.processors["pre"]
 			if ok {
-				h.errs <- pl.Process(e)
+				h.Errs <- pl.Process(e)
 			}
 			err := h.db.Save(e)
 			if err != nil {
-				h.errs <- err
+				h.Errs <- err
 			}
 			for _, b := range h.broadcasters {
 				go b.Broadcast(e)
 			}
 
 		case <-h.quit:
-			h.errs <- merged.Close()
+			h.Errs <- merged.Close()
 			return
 		}
 	}
